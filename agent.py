@@ -36,7 +36,8 @@ class Agent:
         new_y = self.y + dy
 
         # Debug: stampa la direzione e la nuova posizione
-        print(f"Agente si muove da ({self.x}, {self.y}) a ({new_x}, {new_y})")
+        print(f"Agente({self.id}) si muove da ({self.y}, {self.x}) a ({new_y}, {new_x})")
+        # accidenti
 
         # Controlla se la nuova posizione è dentro i limiti della griglia
         if 0 <= new_x < self.enviroment.width and 0 <= new_y < self.enviroment.height:

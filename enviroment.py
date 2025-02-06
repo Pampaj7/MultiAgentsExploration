@@ -53,14 +53,8 @@ class Enviroment:
         ax.set_ylabel('Y')
         ax.legend(loc='upper left')
 
-        # Debug: stampa le posizioni degli agenti
-        for i, agent in enumerate(self.agents):
-            print(f"Agente {i} posizione: ({agent.x}, {agent.y})")
 
-    def animate(self):
-        """
-        Esegue la visualizzazione in tempo reale della simulazione con aggiornamenti dinamici.
-        """
+    def animate(self, steps=10):
         fig, ax = plt.subplots()
         ax.set_xlim(0, self.width)
         ax.set_ylim(0, self.height)
@@ -69,13 +63,16 @@ class Enviroment:
             """
             Funzione di aggiornamento per ogni fotogramma dell'animazione.
             """
+            # Ogni agente esegue un movimento per ogni fotogramma
             for agent in self.agents:
-                agent.explore()  # L'agente esplora
+                agent.explore()  # Ogni agente esplora (fa un passo)
+
             self.update_map()
             self.render(ax)  # Rende la mappa aggiornata
             return []
 
-        ani = FuncAnimation(fig, update, frames=100, interval=500, blit=False)
+        # 10 è il numero di passi totali per tutti gli agenti
+        ani = FuncAnimation(fig, update, frames=steps, interval=500, blit=False)
         plt.show()
 
     def __str__(self):
