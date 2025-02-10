@@ -31,7 +31,7 @@ class Enviroment:
     def update_map(self):
         """
         Aggiorna la mappa basandosi su una soglia adattiva per decidere se
-        una cella è libera o occupata.
+        una cella è libera od occupata.
         """
         for agent in self.agents:
             for (x, y) in agent.visited_cells:
@@ -60,6 +60,7 @@ class Enviroment:
         ax.legend(loc='upper left')
 
     def animate(self, steps=10):
+        # funziona partenza
         fig, ax = plt.subplots()
         ax.set_xlim(0, self.width)
         ax.set_ylim(0, self.height)
@@ -70,6 +71,7 @@ class Enviroment:
             """
             # Ogni agente esegue un movimento per ogni fotogramma
             for agent in self.agents:
+                # per ogni agente lanciamo la funzione di explore ctlr+b to go
                 agent.explore()  # Ogni agente esplora (fa un passo)
 
             self.update_map()
@@ -88,8 +90,8 @@ class Enviroment:
 
     def entropy(self, x, y):
         """
-        Calcola l'entropia di una cella considerando un intorno 3x3.
-        L'entropia misura il livello di incertezza della zona.
+        Calcola l'entropia locale di una cella considerando un intorno 3x3.
+        Penalizza le celle già esplorate per evitare che gli agenti vi ritornino.
         """
         kernel_size = 3  # Finestra 3x3
         half_k = kernel_size // 2
@@ -101,8 +103,10 @@ class Enviroment:
                 if 0 <= nx < self.width and 0 <= ny < self.height:
                     values.append(self.grid[nx, ny])
 
-        # Probabilità della cella essere libera/occupata
         p = np.mean(values)
-        if p in [0, 1]:  # Se è completamente libera od occupata, entropia = 0
-            return 0
-        return -p * np.log2(p) - (1 - p) * np.log2(1 - p)
+
+        # Penalizza le celle già esplorate
+        if p in [0, 1]:
+            return 0  # Entropia minima se completamente noto
+        return -p * np.log2(p) - (1 - p) * np.log2(1 - p) + (1 - p)  # Aggiunta penalizzazione
+

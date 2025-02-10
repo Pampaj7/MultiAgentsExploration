@@ -28,24 +28,46 @@ class Agent:
 
     def move(self):
         """
-        Muove l'agente verso la cella con maggiore entropia nell'intorno.
-        Se non ci sono celle con incertezza, si muove casualmente.
+        Moves the agent towards the cell with the highest entropy in its 3x3 neighborhood.
+        If all nearby cells have low entropy (already explored), the agent moves randomly.
         """
-        neighbors = [(self.x + dx, self.y + dy) for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]]
-        neighbors = [(nx, ny) for nx, ny in neighbors if
-                     0 <= nx < self.enviroment.width and 0 <= ny < self.enviroment.height]
+        # Define possible moves (up, down, left, right)
+        possible_moves = [
+            (self.x - 1, self.y),  # Up
+            (self.x + 1, self.y),  # Down
+            (self.x, self.y - 1),  # Left
+            (self.x, self.y + 1),  # Right
+            (self.x - 1, self.y - 1),  # Up-Left
+            (self.x - 1, self.y + 1),  # Up-Right
+            (self.x + 1, self.y - 1),  # Down-Left
+            (self.x + 1, self.y + 1)  # Down-Right
+        ]
+        # attenzione che la griglia rispetta le matrici, x la riga y la colonna, origine in alto a sinistra
 
-        if neighbors:
-            # Trova la cella con entropia massima
-            best_cell = max(neighbors, key=lambda cell: self.enviroment.entropy(cell[0], cell[1]))
-            self.x, self.y = best_cell
-        else:
-            # Se nessuna cella disponibile, muoviti casualmente
-            dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
-            new_x, new_y = self.x + dx, self.y + dy
-            if 0 <= new_x < self.enviroment.width and 0 <= new_y < self.enviroment.height:
-                self.x, self.y = new_x, new_y
+        # Filter moves that are inside the grid, senno va fuori
+        valid_moves = [(nx, ny) for nx, ny in possible_moves
+                       if 0 <= nx < self.enviroment.width and 0 <= ny < self.enviroment.height]
 
+        if valid_moves:
+            # Find the cell with the highest entropy
+            best_cell = None
+            max_entropy = -1  # Minimum possible entropy
+
+            for cell in valid_moves: # per ogni cella nel 3x3
+                #confronta le celle adiacenti e sceglie quella con entropia maggiore
+                cell_entropy = self.enviroment.entropy(cell[0], cell[1])
+                if cell_entropy > max_entropy:
+                    max_entropy = cell_entropy
+                    best_cell = cell
+
+            # Move to the best cell only if it has meaningful entropy
+            if best_cell and max_entropy > 0:
+                self.x, self.y = best_cell
+            else:
+                # Move randomly if no good entropy option is found
+                self.x, self.y = random.choice(valid_moves)
+
+        # Mark the current cell as visited
         self.visited_cells.add((self.x, self.y))
 
     def update_voronoi_cell(self):
@@ -88,7 +110,8 @@ class Agent:
         - Si muove in una nuova posizione.
         - Comunica con gli agenti vicini.
         """
-        self.move()
+        # arriva da animate, per ogni agente esegue la funzione explore
+        self.move()  # logica di movimento
         self.communicate_with_nearby_agents()
 
     def gather_data(self):
