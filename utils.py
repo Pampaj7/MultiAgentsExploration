@@ -1,31 +1,32 @@
+import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+matplotlib.use('TkAgg')  # oppure 'Qt5Agg', 'Qt4Agg', a seconda di ciò che hai installato
 
 
-def create_video(n):
-    global X
-    X = np.random.binomial(1, 0.3, size = (n, n))
+def create_video(n, frames=100, interval=1000 / 30):
+    X = np.random.binomial(1, 0.3, size=(n, n))
 
-    fig = plt.figure()
-    im = plt.imshow(X, cmap = plt.cm.gray)
+    fig, ax = plt.subplots()
+    im = ax.imshow(X, cmap='gray', interpolation='nearest')
 
     def animate(t):
-        global X
-        X = np.roll(X, +1, axis = 0)
+        nonlocal X  # Evita variabili globali
+        X = np.roll(X, shift=1, axis=0)  # Shift di una riga in basso
         im.set_array(X)
         return im,
 
-    anim = FuncAnimation(
-        fig,
-        animate,
-        frames = 100,
-        interval = 1000/30,
-        blit = True
-    )
+    anim = FuncAnimation(fig, animate, frames=frames, interval=interval, blit=True)
 
+    # Mostrare il video
     plt.show()
+
+    # Salvataggio del video
+    # anim.save("output.mp4", fps=30, extra_args=['-vcodec', 'libx264'])
 
     return anim
 
-anim = create_video(100000)
+
+# Esegui l'animazione
+anim = create_video(100)

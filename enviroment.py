@@ -1,7 +1,12 @@
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation
 
+matplotlib.use('TkAgg')  # oppure 'Qt5Agg', 'Qt4Agg', a seconda di ciò che hai installato
+
+
+# damnit! this solved the problem
 
 class Enviroment:
     """
@@ -25,12 +30,13 @@ class Enviroment:
 
     def update_map(self):
         """
-        Aggiorna la mappa dell'ambiente in base alle celle visitate dagli agenti.
+        Aggiorna la mappa basandosi su una soglia adattiva per decidere se
+        una cella è libera o occupata.
         """
         for agent in self.agents:
             for (x, y) in agent.visited_cells:
-                if 0 <= x < self.width and 0 <= y < self.height:  # Controlla i limiti
-                    self.grid[x, y] = 1  # Segna come esplorata
+                if 0 <= x < self.width and 0 <= y < self.height:
+                    self.grid[x, y] = min(self.grid[x, y] + 0.1, 1)  # Accumula probabilità di essere esplorata
 
     def render(self, ax):
         """
@@ -53,7 +59,6 @@ class Enviroment:
         ax.set_ylabel('Y')
         ax.legend(loc='upper left')
 
-
     def animate(self, steps=10):
         fig, ax = plt.subplots()
         ax.set_xlim(0, self.width)
@@ -72,7 +77,7 @@ class Enviroment:
             return []
 
         # 10 è il numero di passi totali per tutti gli agenti
-        ani = FuncAnimation(fig, update, frames=steps, interval=500, blit=False)
+        ani = FuncAnimation(fig, update, frames=steps, interval=1000 / 3)
         plt.show()
 
     def __str__(self):
@@ -80,3 +85,24 @@ class Enviroment:
         Restituisce una rappresentazione testuale dell'ambiente.
         """
         return f"Ambiente {self.width}x{self.height} con {len(self.agents)} agenti."
+
+    def entropy(self, x, y):
+        """
+        Calcola l'entropia di una cella considerando un intorno 3x3.
+        L'entropia misura il livello di incertezza della zona.
+        """
+        kernel_size = 3  # Finestra 3x3
+        half_k = kernel_size // 2
+        values = []
+
+        for dx in range(-half_k, half_k + 1):
+            for dy in range(-half_k, half_k + 1):
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < self.width and 0 <= ny < self.height:
+                    values.append(self.grid[nx, ny])
+
+        # Probabilità della cella essere libera/occupata
+        p = np.mean(values)
+        if p in [0, 1]:  # Se è completamente libera od occupata, entropia = 0
+            return 0
+        return -p * np.log2(p) - (1 - p) * np.log2(1 - p)

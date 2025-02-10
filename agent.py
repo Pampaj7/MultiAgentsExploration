@@ -28,27 +28,25 @@ class Agent:
 
     def move(self):
         """
-        Muove l'agente in una direzione casuale.
+        Muove l'agente verso la cella con maggiore entropia nell'intorno.
+        Se non ci sono celle con incertezza, si muove casualmente.
         """
-        move_choices = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # Direzioni possibili
-        dx, dy = random.choice(move_choices)
-        new_x = self.x + dx
-        new_y = self.y + dy
+        neighbors = [(self.x + dx, self.y + dy) for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]]
+        neighbors = [(nx, ny) for nx, ny in neighbors if
+                     0 <= nx < self.enviroment.width and 0 <= ny < self.enviroment.height]
 
-        # Debug: stampa la direzione e la nuova posizione
-        print(f"Agente({self.id}) si muove da ({self.y}, {self.x}) a ({new_y}, {new_x})")
-        # accidenti
-
-        # Controlla se la nuova posizione è dentro i limiti della griglia
-        if 0 <= new_x < self.enviroment.width and 0 <= new_y < self.enviroment.height:
-            self.x = new_x
-            self.y = new_y
-            self.visited_cells.add((self.x, self.y))  # Aggiungi la cella visitata
-            self.update_voronoi_cell()
-
+        if neighbors:
+            # Trova la cella con entropia massima
+            best_cell = max(neighbors, key=lambda cell: self.enviroment.entropy(cell[0], cell[1]))
+            self.x, self.y = best_cell
         else:
-            # Se fuori dai limiti, non muovere l'agente
-            pass
+            # Se nessuna cella disponibile, muoviti casualmente
+            dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
+            new_x, new_y = self.x + dx, self.y + dy
+            if 0 <= new_x < self.enviroment.width and 0 <= new_y < self.enviroment.height:
+                self.x, self.y = new_x, new_y
+
+        self.visited_cells.add((self.x, self.y))
 
     def update_voronoi_cell(self):
         """
@@ -62,15 +60,27 @@ class Agent:
                     self.current_voronoi_cell = agent
                     min_dist = dist
 
-    def communicate_with_nearby_agents(self):
+    def move(self):
         """
-        Comunica con gli agenti vicini se la distanza è inferiore a una soglia.
+        Muove l'agente verso la cella con maggiore entropia nell'intorno.
+        Se non ci sono celle con incertezza, si muove casualmente.
         """
-        for other_agent in self.enviroment.agents:
-            if other_agent != self:
-                dist = np.sqrt((self.x - other_agent.x) ** 2 + (self.y - other_agent.y) ** 2)
-                if dist < 2:
-                    print(f"Agente {self.id} comunica con l'agente {other_agent.id}")
+        neighbors = [(self.x + dx, self.y + dy) for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]]
+        neighbors = [(nx, ny) for nx, ny in neighbors if
+                     0 <= nx < self.enviroment.width and 0 <= ny < self.enviroment.height]
+
+        if neighbors:
+            # Trova la cella con entropia massima
+            best_cell = max(neighbors, key=lambda cell: self.enviroment.entropy(cell[0], cell[1]))
+            self.x, self.y = best_cell
+        else:
+            # Se nessuna cella disponibile, muoviti casualmente
+            dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
+            new_x, new_y = self.x + dx, self.y + dy
+            if 0 <= new_x < self.enviroment.width and 0 <= new_y < self.enviroment.height:
+                self.x, self.y = new_x, new_y
+
+        self.visited_cells.add((self.x, self.y))
 
     def explore(self):
         """
@@ -93,3 +103,20 @@ class Agent:
         Restituisce una rappresentazione testuale dell'agente.
         """
         return f"Agente {self.id} in posizione ({self.x}, {self.y})"
+
+    def communicate_with_nearby_agents(self):
+        """
+        Controlla se un altro agente sta per muoversi nella stessa cella
+        e cerca di evitare collisioni.
+        """
+        for other in self.enviroment.agents:
+            if other != self and (self.x, self.y) == (other.x, other.y):
+                # Se c'è una collisione, prova a muoverti altrove
+                move_choices = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+                random.shuffle(move_choices)
+                for dx, dy in move_choices:
+                    new_x, new_y = self.x + dx, self.y + dy
+                    if 0 <= new_x < self.enviroment.width and 0 <= new_y < self.enviroment.height and (
+                            new_x, new_y) not in [(a.x, a.y) for a in self.enviroment.agents]:
+                        self.x, self.y = new_x, new_y
+                        break

@@ -1,27 +1,26 @@
 from agent import Agent
-import time
-import random
 from enviroment import Enviroment
+import random
+
 
 def main():
-    # Crea un ambiente 10x10
-    env = Enviroment(10, 10)
+    # 📌 1. Creiamo un ambiente di dimensione 20x20
+    env = Enviroment(width=20, height=20)
 
-    # Aggiungi più agenti a posizioni diverse
-    agent1 = Agent(1, 2, 5, env)
-    agent2 = Agent(2, 3, 3, env)
-    agent3 = Agent(3, 7, 7, env)
+    # 📌 2. Creiamo 5 agenti in posizioni casuali
+    num_agents = 5
+    agents = []
+    for i in range(num_agents):
+        x, y = random.randint(0, env.width - 1), random.randint(0, env.height - 1)
+        agent = Agent(id=i, x=x, y=y, enviroment=env)
+        agents.append(agent)
 
-    # Aggiungi gli agenti all'ambiente
-    env.add_agent(agent1)
-    env.add_agent(agent2)
-    env.add_agent(agent3)
+    print(f"Creato ambiente {env.width}x{env.height} con {num_agents} agenti.")
 
-    # Ogni agente farà 10 passi
-    steps_per_agent = 10
-
-    # Avvia l'animazione
+    # 📌 3. Avviamo la simulazione con 50 passi
+    steps_per_agent = 50
     env.animate(steps=steps_per_agent)
+
 
 if __name__ == "__main__":
     main()
