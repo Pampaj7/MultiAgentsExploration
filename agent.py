@@ -22,7 +22,7 @@ class Agent:
         self.y = y
         self.enviroment = enviroment
         self.visited_cells = set()  # Celle visitate dall'agente
-        self.current_voronoi_cell = None  # Celle di Voronoi associate
+        self.current_voronoi_cell = []  # Celle di Voronoi associate
 
         self.enviroment.add_agent(self)  # Aggiunge l'agente all'ambiente
 

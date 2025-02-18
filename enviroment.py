@@ -2,6 +2,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation
+from scipy.spatial import Voronoi, voronoi_plot_2d, cKDTree
+import matplotlib.colors as mcolors
 
 matplotlib.use('TkAgg')  # oppure 'Qt5Agg', 'Qt4Agg', a seconda di ciò che hai installato
 
@@ -21,6 +23,7 @@ class Enviroment:
         self.height = height
         self.grid = np.zeros((width, height))  # 0 per celle libere, 1 per celle esplorate
         self.agents = []
+        self.voronoi_cells = []
 
     def add_agent(self, agent):
         """
@@ -37,27 +40,81 @@ class Enviroment:
             for (x, y) in agent.visited_cells:
                 if 0 <= x < self.width and 0 <= y < self.height:
                     self.grid[x, y] = min(self.grid[x, y] + 0.1, 1)  # Accumula probabilità di essere esplorata
+    
+    def update_voronoi(self):
+        """
+        Aggiorna la cella di Voronoi di ciascun agente.
+        Ogni agente riceve la lista delle celle assegnate alla sua regione di Voronoi.
+        """
+        import numpy as np
+        from scipy.spatial import Voronoi, cKDTree
 
+        # Extract agent positions
+        points = np.array([(agent.x, agent.y) for agent in self.agents])
+        agent_ids = {i: agent.id for i, agent in enumerate(self.agents)}  # Map index → agent ID
+        id_to_agent = {agent.id: agent for agent in self.agents}
+
+        # Compute Voronoi diagram
+        vor = Voronoi(points)
+
+        # Create a uniform grid covering the environment
+        grid_x, grid_y = np.meshgrid(np.arange(self.width), np.arange(self.height))
+        grid_points = np.vstack([grid_x.ravel(), grid_y.ravel()]).T  # Convert to (x, y) list
+
+        # Find the nearest Voronoi seed (agent) for each grid cell using KDTree
+        tree = cKDTree(points)
+        _, nearest_agent_idx = tree.query(grid_points)  # Get index of closest agent
+
+        # Reshape the assignment into a 2D grid
+        grid_assignment = nearest_agent_idx.reshape(self.width, self.height)
+
+        # Clear previous Voronoi cells for all agents
+        for agent in self.agents:
+            agent.current_voronoi_cell = []
+
+        # Assign each grid cell to the corresponding agent **by ID**
+        for x in range(self.width):
+            for y in range(self.height):
+                agent_index = grid_assignment[x, y]  # Find the agent index
+                agent_id = agent_ids[agent_index]  # Get the agent's unique ID
+                id_to_agent[agent_id].current_voronoi_cell.append((x, y))  
+            
     def render(self, ax):
         """
         Visualizza la mappa dell'ambiente usando Matplotlib.
-        Mostra la posizione degli agenti e le celle esplorate.
+        Mostra la posizione degli agenti e le celle esplorate, evidenziando le celle Voronoi.
         """
         ax.clear()  # Pulisce il grafico prima di ridisegnare
+        
+        # Visualizza la mappa di base in grigio
         ax.imshow(self.grid, cmap='gray', origin='lower', extent=(0, self.width, 0, self.height))
 
+        # Definisci una colormap per le regioni di Voronoi
+        cmap = plt.get_cmap("tab10")  # Usa 10 colori diversi per gli agenti
+        norm = mcolors.Normalize(vmin=0, vmax=len(self.agents) - 1)  # Normalizza ID agenti
+
+        # Disegna le regioni di Voronoi
+        voronoi_grid = np.full((self.width, self.height), -1)  # Inizializza griglia con -1 (nessuna regione)
+
+        for agent in self.agents:
+            for (x, y) in agent.current_voronoi_cell:
+                voronoi_grid[x, y] = agent.id  # Assegna ID dell'agente alla cella
+        
+        # Usa pcolormesh per colorare le regioni Voronoi
+        ax.pcolormesh(np.arange(self.width + 1), np.arange(self.height + 1), voronoi_grid.T,
+                    cmap=cmap, norm=norm, alpha=0.4)  # `alpha=0.4` rende le regioni semitrasparenti
+
         # Disegna le posizioni degli agenti
-        agent_positions = np.array(
-            [(agent.y, agent.x) for agent in self.agents])  # Inverti x e y per Matplotlib allucinante
-
-        # Aggiungi un piccolo offset se necessario per allineare meglio i punti
+        agent_positions = np.array([(agent.y, agent.x) for agent in self.agents])  # Inverti x e y per Matplotlib
+        
         ax.scatter(agent_positions[:, 0] + 0.5, agent_positions[:, 1] + 0.5,
-                   color='red', label='Agenti', marker='x')
+                color='red', label='Agenti', marker='x', s=100)
 
-        ax.set_title('Ambiente - Esplorazione')
+        ax.set_title('Ambiente - Esplorazione con Voronoi')
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.legend(loc='upper left')
+
 
     def animate(self, steps=10):
         # funziona partenza
@@ -75,6 +132,7 @@ class Enviroment:
                 agent.explore()  # Ogni agente esplora (fa un passo)
 
             self.update_map()
+            self.update_voronoi()
             self.render(ax)  # Rende la mappa aggiornata
             return []
 
