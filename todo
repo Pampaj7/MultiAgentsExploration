@@ -1,0 +1,4 @@
+- [ ] Fare la logica della separazione delle celle di voronoi
+- [ ] Esplorazione in relazione alle celle di voronoi
+- [ ] Correggere il codice ricontrollare i commenti, secondo me c'è tanta roba inutile
+- [ ] ricontrollare le probabilità cumulate, ogni tanto si bugga e non deve andarci sopra per visitare, basta ci stia accanto
