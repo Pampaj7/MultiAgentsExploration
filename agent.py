@@ -82,7 +82,7 @@ class Agent:
                     self.current_voronoi_cell = agent
                     min_dist = dist
 
-    def move(self):
+    def move(self): #credo proprio che venga usata questa move TODO: togliere l'altra
         """
         Muove l'agente verso la cella con maggiore entropia nell'intorno.
         Se non ci sono celle con incertezza, si muove casualmente.
@@ -127,7 +127,7 @@ class Agent:
         """
         return f"Agente {self.id} in posizione ({self.x}, {self.y})"
 
-    def communicate_with_nearby_agents(self):
+    def communicate_with_nearby_agents(self): #TODO: da rivedere
         """
         Controlla se un altro agente sta per muoversi nella stessa cella
         e cerca di evitare collisioni.

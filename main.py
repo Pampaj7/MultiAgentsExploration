@@ -9,7 +9,7 @@ def main():
 
     # 📌 2. Creiamo 5 agenti in posizioni casuali
     num_agents = 5
-    agents = []
+    agents = [] # TODO: secondo me non serve salvare gli agenti se sono gia nell'env
     for i in range(num_agents):
         x, y = random.randint(0, env.width - 1), random.randint(0, env.height - 1)
         agent = Agent(id=i, x=x, y=y, enviroment=env)
