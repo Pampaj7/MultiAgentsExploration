@@ -30,6 +30,7 @@ class Enviroment:
         Aggiunge un agente alla simulazione.
         """
         self.agents.append(agent)
+        print(f"Agent added at position: ({agent.x}, {agent.y})")
 
     def update_map(self):
         """
@@ -50,6 +51,38 @@ class Enviroment:
         from scipy.spatial import Voronoi, cKDTree
 
         # Extract agent positions
+        if len(self.agents) == 1:
+            self.agents[0].current_voronoi_cell = [(x, y) for x in range(self.width) for y in range(self.height)]
+            return
+        if len(self.agents) == 2:
+            # Calculate the perpendicular bisector,  x e y sono invertiti sennò non torna
+            mid_x = (self.agents[0].y + self.agents[1].y) / 2
+            mid_y = (self.agents[0].x + self.agents[1].x) / 2
+            
+            # Check for vertical line (same x-coordinates)
+            if self.agents[0].x == self.agents[1].x:
+                # If vertical, divide space based on the x-coordinate
+                for x in range(self.width):
+                    for y in range(self.height):
+                        if x < mid_x:
+                            self.agents[0].current_voronoi_cell.append((x, y))
+                        else:
+                            self.agents[1].current_voronoi_cell.append((x, y))
+            else:
+                # General case: calculate the slope of the line and its perpendicular slope
+                slope = (self.agents[1].x - self.agents[0].x) / (self.agents[1].y - self.agents[0].y)
+                perp_slope = -1 / slope
+                
+                # Assign cells based on the perpendicular bisector
+                for x in range(self.width):
+                    for y in range(self.height):
+                        if (y - mid_y) < perp_slope * (x - mid_x):
+                            self.agents[0].current_voronoi_cell.append((x, y))
+                        else:
+                            self.agents[1].current_voronoi_cell.append((x, y))
+            return
+
+
         points = np.array([(agent.x, agent.y) for agent in self.agents])
         agent_ids = {i: agent.id for i, agent in enumerate(self.agents)}  # Map index → agent ID
         id_to_agent = {agent.id: agent for agent in self.agents}
@@ -132,7 +165,6 @@ class Enviroment:
                 agent.explore()  # Ogni agente esplora (fa un passo)
 
             self.update_map()
-            self.update_voronoi()
             self.render(ax)  # Rende la mappa aggiornata
             return []
 

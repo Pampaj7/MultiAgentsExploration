@@ -14,6 +14,7 @@ def main():
         x, y = random.randint(0, env.width - 1), random.randint(0, env.height - 1)
         agent = Agent(id=i, x=x, y=y, enviroment=env)
         agents.append(agent)
+    env.update_voronoi()
 
     print(f"Creato ambiente {env.width}x{env.height} con {num_agents} agenti.")
 
