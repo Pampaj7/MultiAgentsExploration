@@ -20,14 +20,15 @@ class Agent:
         self.id = id
         self.x = x
         self.y = y
+        self.sensing_accuracy = 0.9  # Precisione del sensore dell'agente
         self.vision = 1 # Raggio di visione dell'agente
         self.enviroment = enviroment
-        self.visited_cells = set()  # Celle visitate dall'agente
+        self.visited_cells = {}  # Celle visitate dall'agente
         self.current_voronoi_cell = []  # Celle di Voronoi associate
 
         self.enviroment.add_agent(self)  # Aggiunge l'agente all'ambiente
 
-    def move(self):
+    def move(self):#TODO: da rivedere con entropia cambiata
         """
         Moves the agent towards the cell with the highest entropy **inside its Voronoi cell**.
         If all nearby cells have low entropy, the agent moves randomly within its Voronoi region.
@@ -56,7 +57,7 @@ class Agent:
             max_entropy = -1  
 
             for cell in valid_moves:
-                cell_entropy = self.enviroment.entropy(cell[0], cell[1])
+                cell_entropy = self.entropy(cell[0], cell[1])
                 if cell_entropy > max_entropy:
                     max_entropy = cell_entropy
                     best_cell = cell
@@ -69,13 +70,34 @@ class Agent:
                 self.x, self.y = random.choice(valid_moves)
 
         # Mark the current cell as visited
-        self.visited_cells.add((self.x, self.y))
-        # Add every cell inside the vision range to visited_cells
+        #self.visited_cells.add((self.x, self.y))
+        # Add every cell inside the vision range to visited_cells TODO: fare una funzione sensing da richiamare, forse è più pulito
         for dx in range(-self.vision, self.vision + 1):
             for dy in range(-self.vision, self.vision + 1):
                 nx, ny = self.x + dx, self.y + dy
                 if 0 <= nx < self.enviroment.width and 0 <= ny < self.enviroment.height:
-                    self.visited_cells.add((nx, ny))
+                    self.visited_cells[(nx, ny)] = 1 if (nx, ny) in self.enviroment.obstacles else 0
+
+    def entropy(self, x, y):
+        """
+        Calcola l'entropia massima all'interno della cella di Voronoi dell'agente.
+        """
+        kernel_size = 3  # Finestra 3x3
+        half_k = kernel_size // 2
+        values = []
+
+        for dx in range(-half_k, half_k + 1):
+            for dy in range(-half_k, half_k + 1):
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < self.enviroment.width and 0 <= ny < self.enviroment.height:
+                    values.append(self.enviroment.grid[nx, ny])
+
+        p = np.mean(values)
+
+        # Penalizza le celle già esplorate
+        if p in [0, 1]:
+            return 0  # Entropia minima se completamente noto
+        return -p * np.log2(p) - (1 - p) * np.log2(1 - p) + (1 - p)  # Aggiunta penalizzazione
 
 
     def update_voronoi_cell(self):
@@ -119,7 +141,7 @@ class Agent:
         - Comunica con gli agenti vicini.
         """
         # arriva da animate, per ogni agente esegue la funzione explore
-        #self.move()  # logica di movimento
+        self.move()  # logica di movimento
         #self.communicate_with_nearby_agents()
 
     def gather_data(self):

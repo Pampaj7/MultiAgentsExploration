@@ -4,6 +4,7 @@ import numpy as np
 from matplotlib.animation import FuncAnimation
 from scipy.spatial import Voronoi, voronoi_plot_2d, cKDTree
 import matplotlib.colors as mcolors
+import random
 
 matplotlib.use('TkAgg')  # oppure 'Qt5Agg', 'Qt4Agg', a seconda di ciò che hai installato
 
@@ -21,9 +22,22 @@ class Enviroment:
         """
         self.width = width
         self.height = height
-        self.grid = np.zeros((width, height))  # 0 per celle libere, 1 per celle esplorate
+        self.grid = None # contiene la probabilità di essere occupata
         self.agents = []
+        self.obstacles = []
         self.voronoi_cells = []
+        self.init()
+
+    def init(self):
+        self.grid = np.full((self.width, self.height), 0.5)  
+        for i in range(5):
+            while True:
+                x, y = random.randint(0, self.width - 1), random.randint(0, self.height - 1)
+                if (x, y) not in self.obstacles and all(agent.x != x or agent.y != y for agent in self.agents):
+                    self.obstacles.append((x, y))
+                    break
+        
+
 
     def add_agent(self, agent):
         """
@@ -32,15 +46,44 @@ class Enviroment:
         self.agents.append(agent)
         print(f"Agent added at position: ({agent.x}, {agent.y})")
 
+    def add_obstacle(self, x, y):
+        """
+        Aggiunge un ostacolo all'ambiente.
+        """
+        self.obstacles.append((x, y))
+
     def update_map(self):
         """
         Aggiorna la mappa basandosi su una soglia adattiva per decidere se
         una cella è libera od occupata.
+        utilizza le probabilità accumulate per ogni cella.
         """
         for agent in self.agents:
-            for (x, y) in agent.visited_cells:
+            for (x, y), occupancy in agent.visited_cells.items():  # Get both coordinates and occupancy
                 if 0 <= x < self.width and 0 <= y < self.height:
-                    self.grid[x, y] = min(self.grid[x, y] + 0.1, 1)  # Accumula probabilità di essere esplorata
+                    # Determine sensor likelihoods based on observation
+                    p_obs_given_occupied = agent.sensing_accuracy if occupancy == 1 else 1 - agent.sensing_accuracy
+                    p_obs_given_free = 1 - agent.sensing_accuracy if occupancy == 1 else agent.sensing_accuracy
+
+                    # Bayesian update and store result
+                    self.grid[x, y] = self.bayes_update(self.grid[x, y], p_obs_given_occupied, p_obs_given_free)
+
+
+    def bayes_update(self, prior, p_obs_given_occupied, p_obs_given_free):
+        """
+        Perform a Bayesian update of occupancy probability.
+
+        Args:
+            prior (float): Prior probability of the cell being occupied
+            p_obs_given_occupied (float): Probability of the observation given the cell is occupied.
+            p_obs_given_free (float): Probability of the observation given the cell is free.
+
+        Returns:
+            float: Updated posterior probability of the cell being occupied.
+        """        
+        evidence = p_obs_given_occupied * prior + p_obs_given_free * (1 - prior)
+        posterior = (p_obs_given_occupied * prior) / evidence if evidence > 0 else prior
+        return posterior
     
     def update_voronoi(self):
         """
@@ -165,6 +208,7 @@ class Enviroment:
                 agent.explore()  # Ogni agente esplora (fa un passo)
 
             self.update_map()
+            print(self.grid)
             self.render(ax)  # Rende la mappa aggiornata
             return []
 
@@ -177,26 +221,4 @@ class Enviroment:
         Restituisce una rappresentazione testuale dell'ambiente.
         """
         return f"Ambiente {self.width}x{self.height} con {len(self.agents)} agenti."
-
-    def entropy(self, x, y):
-        """
-        Calcola l'entropia locale di una cella considerando un intorno 3x3.
-        Penalizza le celle già esplorate per evitare che gli agenti vi ritornino.
-        """
-        kernel_size = 3  # Finestra 3x3
-        half_k = kernel_size // 2
-        values = []
-
-        for dx in range(-half_k, half_k + 1):
-            for dy in range(-half_k, half_k + 1):
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < self.width and 0 <= ny < self.height:
-                    values.append(self.grid[nx, ny])
-
-        p = np.mean(values)
-
-        # Penalizza le celle già esplorate
-        if p in [0, 1]:
-            return 0  # Entropia minima se completamente noto
-        return -p * np.log2(p) - (1 - p) * np.log2(1 - p) + (1 - p)  # Aggiunta penalizzazione
 
