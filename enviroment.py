@@ -25,7 +25,8 @@ class Enviroment:
         self.grid = None # contiene la probabilità di essere occupata
         self.agents = []
         self.obstacles = []
-        self.voronoi_cells = []
+        self.voronoi_cells = {}
+        self.frontier_points= {}
         self.init()
 
     def init(self):
@@ -87,73 +88,66 @@ class Enviroment:
     
     def update_voronoi(self):
         """
-        Aggiorna la cella di Voronoi di ciascun agente.
-        Ogni agente riceve la lista delle celle assegnate alla sua regione di Voronoi.
+        Update the Voronoi cells of each agent.
+        Each agent receives the list of cells assigned to its Voronoi region.
         """
         import numpy as np
         from scipy.spatial import Voronoi, cKDTree
 
-        # Extract agent positions
+        # Initialize Voronoi cells dictionary with empty lists
+        self.voronoi_cells = {agent.id: [] for agent in self.agents}  # 🟢 FIXED HERE
+
+        # Case 1: Only one agent (takes all cells)
         if len(self.agents) == 1:
-            self.agents[0].current_voronoi_cell = [(x, y) for x in range(self.width) for y in range(self.height)]
+            self.voronoi_cells[self.agents[0].id] = [(x, y) for x in range(self.width) for y in range(self.height)]
             return
+
+        # Case 2: Exactly two agents (use perpendicular bisector)
         if len(self.agents) == 2:
-            # Calculate the perpendicular bisector,  x e y sono invertiti sennò non torna
+            # Midpoint
             mid_x = (self.agents[0].y + self.agents[1].y) / 2
             mid_y = (self.agents[0].x + self.agents[1].x) / 2
-            
-            # Check for vertical line (same x-coordinates)
+
+            # If vertical line (equal x-coordinates)
             if self.agents[0].x == self.agents[1].x:
-                # If vertical, divide space based on the x-coordinate
                 for x in range(self.width):
                     for y in range(self.height):
                         if x < mid_x:
-                            self.agents[0].current_voronoi_cell.append((x, y))
+                            self.voronoi_cells[self.agents[0].id].append((x, y))
                         else:
-                            self.agents[1].current_voronoi_cell.append((x, y))
+                            self.voronoi_cells[self.agents[1].id].append((x, y))
             else:
-                # General case: calculate the slope of the line and its perpendicular slope
+                # General case: calculate slope and perpendicular slope
                 slope = (self.agents[1].x - self.agents[0].x) / (self.agents[1].y - self.agents[0].y)
                 perp_slope = -1 / slope
-                
-                # Assign cells based on the perpendicular bisector
+
                 for x in range(self.width):
                     for y in range(self.height):
                         if (y - mid_y) < perp_slope * (x - mid_x):
-                            self.agents[0].current_voronoi_cell.append((x, y))
+                            self.voronoi_cells[self.agents[0].id].append((x, y))
                         else:
-                            self.agents[1].current_voronoi_cell.append((x, y))
+                            self.voronoi_cells[self.agents[1].id].append((x, y))
             return
 
-
+        # Case 3: More than two agents (Voronoi diagram)
         points = np.array([(agent.x, agent.y) for agent in self.agents])
-        agent_ids = {i: agent.id for i, agent in enumerate(self.agents)}  # Map index → agent ID
-        id_to_agent = {agent.id: agent for agent in self.agents}
+        index_to_agent = {i: agent for i, agent in enumerate(self.agents)}
 
-        # Compute Voronoi diagram
+        # Voronoi diagram and KDTree
         vor = Voronoi(points)
-
-        # Create a uniform grid covering the environment
         grid_x, grid_y = np.meshgrid(np.arange(self.width), np.arange(self.height))
-        grid_points = np.vstack([grid_x.ravel(), grid_y.ravel()]).T  # Convert to (x, y) list
-
-        # Find the nearest Voronoi seed (agent) for each grid cell using KDTree
+        grid_points = np.vstack([grid_x.ravel(), grid_y.ravel()]).T
         tree = cKDTree(points)
-        _, nearest_agent_idx = tree.query(grid_points)  # Get index of closest agent
-
-        # Reshape the assignment into a 2D grid
+        _, nearest_agent_idx = tree.query(grid_points)
         grid_assignment = nearest_agent_idx.reshape(self.width, self.height)
 
-        # Clear previous Voronoi cells for all agents
-        for agent in self.agents:
-            agent.current_voronoi_cell = []
-
-        # Assign each grid cell to the corresponding agent **by ID**
+        # Assign cells to each agent
         for x in range(self.width):
             for y in range(self.height):
-                agent_index = grid_assignment[x, y]  # Find the agent index
-                agent_id = agent_ids[agent_index]  # Get the agent's unique ID
-                id_to_agent[agent_id].current_voronoi_cell.append((x, y))  
+                agent_index = grid_assignment[x, y]
+                self.voronoi_cells[index_to_agent[agent_index].id].append((x, y))  # ✅ FIXED HERE
+
+
             
     def render(self, ax):
         """
@@ -173,7 +167,7 @@ class Enviroment:
         voronoi_grid = np.full((self.width, self.height), -1)  # Inizializza griglia con -1 (nessuna regione)
 
         for agent in self.agents:
-            for (x, y) in agent.current_voronoi_cell:
+            for (x, y) in self.voronoi_cells[agent.id]:
                 voronoi_grid[x, y] = agent.id  # Assegna ID dell'agente alla cella
         
         # Usa pcolormesh per colorare le regioni Voronoi
@@ -209,6 +203,7 @@ class Enviroment:
 
             self.update_map()
             print(self.grid)
+            print("_______________FINE GRID____________________")
             self.render(ax)  # Rende la mappa aggiornata
             return []
 

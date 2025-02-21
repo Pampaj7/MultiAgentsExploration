@@ -23,8 +23,8 @@ class Agent:
         self.sensing_accuracy = 0.9  # Precisione del sensore dell'agente
         self.vision = 1 # Raggio di visione dell'agente
         self.enviroment = enviroment
-        self.visited_cells = {}  # Celle visitate dall'agente
-        self.current_voronoi_cell = []  # Celle di Voronoi associate
+        self.visited_cells = {}  # Celle visitate dall'agente 
+         # Celle di Voronoi associate #TODO da togliere
 
         self.enviroment.add_agent(self)  # Aggiunge l'agente all'ambiente
 
@@ -48,7 +48,7 @@ class Agent:
         # Filter moves that are inside both the grid AND the agent's Voronoi region
         valid_moves = [(nx, ny) for nx, ny in possible_moves
                     if (0 <= nx < self.enviroment.width and 0 <= ny < self.enviroment.height) 
-                    and (nx, ny) in self.current_voronoi_cell]  # ✅ Ensure move is inside Voronoi cell
+                    and (nx, ny) in self.enviroment.voronoi_cells[self.id]]  # ✅ Ensure move is inside Voronoi cell
         #print(valid_moves)
 
         if valid_moves:
