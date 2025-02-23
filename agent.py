@@ -69,8 +69,7 @@ class Agent:
                 # If all entropy values are low, move randomly **inside the Voronoi region**
                 self.x, self.y = random.choice(valid_moves)
 
-        # Mark the current cell as visited
-        #self.visited_cells.add((self.x, self.y))
+        self.visited_cells = {} 
         # Add every cell inside the vision range to visited_cells TODO: fare una funzione sensing da richiamare, forse è più pulito
         for dx in range(-self.vision, self.vision + 1):
             for dy in range(-self.vision, self.vision + 1):
@@ -100,40 +99,6 @@ class Agent:
         return -p * np.log2(p) - (1 - p) * np.log2(1 - p) + (1 - p)  # Aggiunta penalizzazione
 
 
-    def update_voronoi_cell(self):
-        """
-        Aggiorna la cella di Voronoi dell'agente in base alla posizione corrente.
-        """
-        min_dist = float('inf')
-        for agent in self.enviroment.agents:
-            if agent != self:
-                dist = np.sqrt((self.x - agent.x) ** 2 + (self.y - agent.y) ** 2)
-                if dist < min_dist:
-                    self.current_voronoi_cell = agent
-                    min_dist = dist
-
-    """     def move(self): #credo proprio che venga usata questa move TODO: togliere l'altra
-   """      """
-        #Muove l'agente verso la cella con maggiore entropia nell'intorno.
-        #Se non ci sono celle con incertezza, si muove casualmente.
-        """ """
-        neighbors = [(self.x + dx, self.y + dy) for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]]
-        neighbors = [(nx, ny) for nx, ny in neighbors if
-                     0 <= nx < self.enviroment.width and 0 <= ny < self.enviroment.height]
-
-        if neighbors:
-            # Trova la cella con entropia massima
-            best_cell = max(neighbors, key=lambda cell: self.enviroment.entropy(cell[0], cell[1]))
-            self.x, self.y = best_cell
-        else:
-            # Se nessuna cella disponibile, muoviti casualmente
-            dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
-            new_x, new_y = self.x + dx, self.y + dy
-            if 0 <= new_x < self.enviroment.width and 0 <= new_y < self.enviroment.height:
-                self.x, self.y = new_x, new_y
-
-        self.visited_cells.add((self.x, self.y)) """
-
     def explore(self):
         """
         Esegue il comportamento di esplorazione:
@@ -142,34 +107,7 @@ class Agent:
         """
         # arriva da animate, per ogni agente esegue la funzione explore
         self.move()  # logica di movimento
-        #self.communicate_with_nearby_agents()
+        
 
-    def gather_data(self):
-        """
-        Raccoglie dati dalla cella corrente e aggiorna la mappa ambientale.
-        """
-        self.enviroment.grid[self.x, self.y] = 1
-        self.enviroment.update_map()
 
-    def __str__(self):
-        """
-        Restituisce una rappresentazione testuale dell'agente.
-        """
-        return f"Agente {self.id} in posizione ({self.x}, {self.y})"
 
-    def communicate_with_nearby_agents(self): #TODO: da rivedere
-        """
-        Controlla se un altro agente sta per muoversi nella stessa cella
-        e cerca di evitare collisioni.
-        """
-        for other in self.enviroment.agents:
-            if other != self and (self.x, self.y) == (other.x, other.y):
-                # Se c'è una collisione, prova a muoverti altrove
-                move_choices = [(0, 1), (0, -1), (1, 0), (-1, 0)]
-                random.shuffle(move_choices)
-                for dx, dy in move_choices:
-                    new_x, new_y = self.x + dx, self.y + dy
-                    if 0 <= new_x < self.enviroment.width and 0 <= new_y < self.enviroment.height and (
-                            new_x, new_y) not in [(a.x, a.y) for a in self.enviroment.agents]:
-                        self.x, self.y = new_x, new_y
-                        break

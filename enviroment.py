@@ -68,6 +68,14 @@ class Enviroment:
 
                     # Bayesian update and store result
                     self.grid[x, y] = self.bayes_update(self.grid[x, y], p_obs_given_occupied, p_obs_given_free)
+            for x, y in np.ndindex(self.grid.shape):
+                if (x, y) not in agent.visited_cells:
+                    if self.grid[x, y] < 0.5:
+                        self.grid[x, y] += 0.01
+                    elif self.grid[x, y] > 0.5:
+                        self.grid[x, y] -= 0.01
+                    
+                    
 
 
     def bayes_update(self, prior, p_obs_given_occupied, p_obs_given_free):
@@ -147,9 +155,26 @@ class Enviroment:
                 agent_index = grid_assignment[x, y]
                 self.voronoi_cells[index_to_agent[agent_index].id].append((x, y))  # ✅ FIXED HERE
 
+    def update_frontier(self):
+        """
+        Update the frontier points of the environment.
+        """
+        self.frontier_points = {agent.id: [] for agent in self.agents}
+        for agent_id, cells in self.voronoi_cells.items():
+            self.frontier_points[agent_id] = []
+            for (x, y) in cells:
+                if self.grid[x, y] == 0.5:
+                    neighbors = [
+                    (x2, y2) for x2 in range(x-1, x+2) 
+                    for y2 in range(y-1, y+2) 
+                    if 0 <= x2 < self.width and 0 <= y2 < self.height and (x2 != x or y2 != y)
+                    ]
+                    if any(self.grid[nx, ny] != 0.5 for nx, ny in neighbors):
+                        self.frontier_points[agent_id].append((x, y))
 
             
     def render(self, ax):
+
         """
         Visualizza la mappa dell'ambiente usando Matplotlib.
         Mostra la posizione degli agenti e le celle esplorate, evidenziando le celle Voronoi.
@@ -157,7 +182,7 @@ class Enviroment:
         ax.clear()  # Pulisce il grafico prima di ridisegnare
         
         # Visualizza la mappa di base in grigio
-        ax.imshow(self.grid, cmap='gray', origin='lower', extent=(0, self.width, 0, self.height))
+        ax.imshow(self.grid, cmap='gray_r', origin='lower', extent=(0, self.width, 0, self.height))
 
         # Definisci una colormap per le regioni di Voronoi
         cmap = plt.get_cmap("tab10")  # Usa 10 colori diversi per gli agenti
@@ -165,11 +190,7 @@ class Enviroment:
 
         # Disegna le regioni di Voronoi
         voronoi_grid = np.full((self.width, self.height), -1)  # Inizializza griglia con -1 (nessuna regione)
-
-        for agent in self.agents:
-            for (x, y) in self.voronoi_cells[agent.id]:
-                voronoi_grid[x, y] = agent.id  # Assegna ID dell'agente alla cella
-        
+ 
         # Usa pcolormesh per colorare le regioni Voronoi
         ax.pcolormesh(np.arange(self.width + 1), np.arange(self.height + 1), voronoi_grid.T,
                     cmap=cmap, norm=norm, alpha=0.4)  # `alpha=0.4` rende le regioni semitrasparenti
@@ -179,6 +200,17 @@ class Enviroment:
         
         ax.scatter(agent_positions[:, 0] + 0.5, agent_positions[:, 1] + 0.5,
                 color='red', label='Agenti', marker='x', s=100)
+
+        # Stampa la probabilità in ogni cella
+        for x in range(self.width):
+            for y in range(self.height):
+                ax.text(y + 0.5, x + 0.5, f'{self.grid[x, y]:.2f}', color='black', ha='center', va='center', fontsize=8)
+        
+        # Disegna i punti di frontiera
+        for frontier in self.frontier_points.values():
+            frontier = np.array(frontier)
+            if frontier.size > 0:
+                ax.scatter(frontier[:, 1] + 0.5, frontier[:, 0] + 0.5, color='blue', label='Frontiera', s=20)
 
         ax.set_title('Ambiente - Esplorazione con Voronoi')
         ax.set_xlabel('X')
@@ -201,9 +233,8 @@ class Enviroment:
                 # per ogni agente lanciamo la funzione di explore ctlr+b to go
                 agent.explore()  # Ogni agente esplora (fa un passo)
 
-            self.update_map()
-            print(self.grid)
-            print("_______________FINE GRID____________________")
+            self.update_map() 
+            self.update_frontier()   
             self.render(ax)  # Rende la mappa aggiornata
             return []
 
