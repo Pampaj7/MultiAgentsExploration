@@ -1,7 +1,9 @@
+
 - [✔️] 🧩 Fare la logica della separazione delle celle di voronoi
-- [ ] 🌐 Esplorazione in relazione alle celle di voronoi
+- [ ] 🌐 Esplorazione in relazione alle celle di voronoi (D* e togliere enthropy)
 - [ ] 🛠️ Correggere il codice ricontrollare i commenti, secondo me c'è tanta roba inutile
 - [✔️] 🔍 Ricontrollare le probabilità cumulate
-- [ ] 📊 Calcolare l'entropia all'interno della cella di voronoi in relazione alla probabilità
+- [✔️] 📍 Punti di frontiera
+
 
 
