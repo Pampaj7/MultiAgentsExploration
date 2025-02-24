@@ -75,7 +75,7 @@ class Agent:
             for dy in range(-self.vision, self.vision + 1):
                 nx, ny = self.x + dx, self.y + dy
                 if 0 <= nx < self.enviroment.width and 0 <= ny < self.enviroment.height:
-                    self.visited_cells[(nx, ny)] = 1 if (nx, ny) in self.enviroment.obstacles else 0
+                    self.visited_cells[(nx, ny)] = 1 if (nx, ny) in [obs.position for obs in self.enviroment.obstacles] else 0
 
     def entropy(self, x, y):
         """

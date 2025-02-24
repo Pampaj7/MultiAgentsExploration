@@ -5,6 +5,8 @@ from matplotlib.animation import FuncAnimation
 from scipy.spatial import Voronoi, voronoi_plot_2d, cKDTree
 import matplotlib.colors as mcolors
 import random
+from map_graph import Node,Graph
+
 
 matplotlib.use('TkAgg')  # oppure 'Qt5Agg', 'Qt4Agg', a seconda di ciò che hai installato
 
@@ -27,16 +29,13 @@ class Enviroment:
         self.obstacles = []
         self.voronoi_cells = {}
         self.frontier_points= {}
+        self.graph = Graph
         self.init()
 
     def init(self):
         self.grid = np.full((self.width, self.height), 0.5)  
-        for i in range(5):
-            while True:
-                x, y = random.randint(0, self.width - 1), random.randint(0, self.height - 1)
-                if (x, y) not in self.obstacles and all(agent.x != x or agent.y != y for agent in self.agents):
-                    self.obstacles.append((x, y))
-                    break
+
+
         
 
 
@@ -47,11 +46,11 @@ class Enviroment:
         self.agents.append(agent)
         print(f"Agent added at position: ({agent.x}, {agent.y})")
 
-    def add_obstacle(self, x, y):
+    def add_obstacle(self, obstacle):
         """
         Aggiunge un ostacolo all'ambiente.
         """
-        self.obstacles.append((x, y))
+        self.obstacles.append(obstacle)
 
     def update_map(self):
         """
@@ -75,9 +74,6 @@ class Enviroment:
                     elif self.grid[x, y] > 0.5:
                         self.grid[x, y] -= 0.01
                     
-                    
-
-
     def bayes_update(self, prior, p_obs_given_occupied, p_obs_given_free):
         """
         Perform a Bayesian update of occupancy probability.
@@ -172,7 +168,13 @@ class Enviroment:
                     if any(self.grid[nx, ny] != 0.5 for nx, ny in neighbors):
                         self.frontier_points[agent_id].append((x, y))
 
-            
+    def update_obstacles(self):
+        """
+        Update the obstacles in the environment.
+        """
+        for obs in self.obstacles:
+            obs.move()      
+
     def render(self, ax):
 
         """
@@ -217,7 +219,6 @@ class Enviroment:
         ax.set_ylabel('Y')
         ax.legend(loc='upper left')
 
-
     def animate(self, steps=10):
         # funziona partenza
         fig, ax = plt.subplots()
@@ -234,7 +235,8 @@ class Enviroment:
                 agent.explore()  # Ogni agente esplora (fa un passo)
 
             self.update_map() 
-            self.update_frontier()   
+            self.update_frontier()  
+            self.update_obstacles() 
             self.render(ax)  # Rende la mappa aggiornata
             return []
 
@@ -248,3 +250,21 @@ class Enviroment:
         """
         return f"Ambiente {self.width}x{self.height} con {len(self.agents)} agenti."
 
+    def generateGraphFromGrid(self):
+        edge = 1
+        for x in range(self.width):
+            for y in range(self.height):
+                node = Node(f'x{x}y{y}')
+                if x > 0:  # not left edge
+                    node.parents[f'x{x-1}y{y}'] = edge
+                    node.children[f'x{x-1}y{y}'] = edge
+                if x < self.width - 1:  # not right edge
+                    node.parents[f'x{x+1}y{y}'] = edge
+                    node.children[f'x{x+1}y{y}'] = edge
+                if y > 0:  # not bottom edge
+                    node.parents[f'x{x}y{y-1}'] = edge
+                    node.children[f'x{x}y{y-1}'] = edge
+                if y < self.height - 1:  # not top edge
+                    node.parents[f'x{x}y{y+1}'] = edge
+                    node.children[f'x{x}y{y+1}'] = edge
+                self.graph[f'x{x}y{y}'] = node

@@ -29,4 +29,4 @@ def create_video(n, frames=100, interval=1000 / 30):
 
 
 # Esegui l'animazione
-anim = create_video(100)
+#anim = create_video(100)
