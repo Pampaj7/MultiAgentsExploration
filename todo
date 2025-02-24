@@ -7,3 +7,44 @@
 
 
 
+
+______________________________________ PIPELINE SUGGERITA DA CHAT ____________________________________
+### 🛠️ How to Implement the Solution:
+
+#### Online Graph Construction:
+The graph is not predefined, but rather constructed incrementally based on the agent’s exploration. Nodes (grid cells) are added as the agent moves and perceives new areas.
+
+#### Exploration and Frontier Detection:
+The agent should explore toward frontiers, which are regions where the probability of occupancy is uncertain (or the grid is unexplored). A frontier could be a cell with high uncertainty or a boundary between known and unknown regions.
+- Frontier cells could be defined as those with low occupancy probability or cells adjacent to unexplored areas (surrounded by unknown cells).
+
+#### Handling Probabilistic Grids in the Graph:
+Instead of a standard grid graph where edges are all the same (e.g., 4-connected neighbors), edges should have weights that reflect the probabilities of traversing that cell. These weights can change as the agent gathers more information.
+- Initially, all cells may be marked as uncertain (with high cost), and as the agent explores, the costs are updated based on the agent’s findings. If the probability of occupancy decreases, the agent may treat that cell as passable.
+
+_____________________________________ IMPLEMENTAZIONE SUGGERITA DA CHAT _______________________________________
+
+💡 Steps to Implement:
+
+1. **Build the Graph Incrementally:**
+    - As the agent moves, it adds nodes (cells) to the graph and connects them based on the movement and exploration.
+    - **Example:** If the agent moves from (x1, y1) to (x2, y2), add both cells as nodes and create an edge between them. The edge weight could be initially set high (representing uncertainty) and decrease as more information is gathered.
+
+2. **Edge Weights Based on Probability:**
+    - The weight of the edge (the cost) between two nodes (cells) can be determined by the occupancy probability.
+    - **Example:** Cells with high occupancy probability (close to 1) would have a higher cost (more difficult to traverse), while low occupancy probability (close to 0) would have a lower cost (easier to traverse).
+    - The agent could use a heuristic that takes this into account when calculating costs for the D* Lite algorithm.
+
+3. **Exploration Towards Frontiers:**
+    - Frontiers are typically the boundary between known and unknown regions (e.g., unexplored adjacent cells or cells with uncertain probability values).
+    - The agent should move towards these frontier points to maximize exploration.
+    - **Implementation:** Frontier detection can be done by checking neighboring cells that have low occupancy probability or are adjacent to known cells with high uncertainty.
+
+4. **Pathfinding with Disconnected Graphs:**
+    - Since the agent starts in a random location and the graph is disconnected initially, you don’t need to worry about having a connected graph at the start.
+    - D* Lite can be used to search for the shortest path to the nearest frontier within the local region. If new information is obtained, the graph and path are updated incrementally.
+
+5. **Dynamic Goal Updating:**
+    - The agent’s goal can dynamically change as new frontiers are discovered.
+    - If the agent reaches a frontier, it should replan and update its goal to the next closest frontier. The D* Lite algorithm would handle this by recalculating the shortest path based on the new goal.
+
