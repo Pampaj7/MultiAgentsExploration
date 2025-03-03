@@ -1,5 +1,8 @@
 import random
 import numpy as np
+from dstar import initDStarLite, moveAndRescan
+from utils import stateNameToCoords
+
 
 
 class Agent:
@@ -24,11 +27,34 @@ class Agent:
         self.vision = 1 # Raggio di visione dell'agente
         self.enviroment = enviroment
         self.visited_cells = {}  # Celle visitate dall'agente 
-         # Celle di Voronoi associate #TODO da togliere
+        self.init()
+        
+    def init(self):
 
-        self.enviroment.add_agent(self)  # Aggiunge l'agente all'ambiente
+        start_id = f'x{self.x}y{self.y}'
+        goal_id = None
+        frontier_points = self.enviroment.frontier_points[self.id]
+        if frontier_points:
+            goal_point = random.choice(frontier_points)
+            goal_id = f'x{goal_point[0]}y{goal_point[1]}'
+        self.enviroment.setStart(start_id, self.id)
+        if goal_id : self.enviroment.setGoal(goal_id, self.id)
+        self.runDStarLite()
 
-    def move(self):#TODO: da rivedere con entropia cambiata
+    def runDStarLite(self):
+        """ Initialize and run D* Lite for this agent """
+        start_id = f'x{self.x}y{self.y}'
+        goal_id = self.enviroment.goals.get(self.id)
+
+        if goal_id:  # Ensure a goal exists before running
+            self.queue = []  # Reset priority queue
+            self.k_m = 0  # Reset cost adjustment factor
+
+            # Initialize D* Lite and store updated queue and k_m
+            _, self.queue, self.k_m = initDStarLite(self.enviroment, self.queue, start_id, goal_id, self.k_m)
+        
+
+    def move(self):#TODO: da rivedere con entropia cambiata da togliere proprio dato che il movimento è dato dal move and rescan
         """
         Moves the agent towards the cell with the highest entropy **inside its Voronoi cell**.
         If all nearby cells have low entropy, the agent moves randomly within its Voronoi region.
@@ -99,15 +125,19 @@ class Agent:
         return -p * np.log2(p) - (1 - p) * np.log2(1 - p) + (1 - p)  # Aggiunta penalizzazione
 
 
-    def explore(self):
-        """
-        Esegue il comportamento di esplorazione:
-        - Si muove in una nuova posizione.
-        - Comunica con gli agenti vicini.
-        """
-        # arriva da animate, per ogni agente esegue la funzione explore
-        self.move()  # logica di movimento
-        
+    def explore(self): #TODO qui c'è da metterci move and rescan
+
+
+        s_new, self.k_m = moveAndRescan(
+            self.enviroment, self.queue, self.s_current, self.vision, self.k_m
+        )
+
+        if s_new == 'goal':
+            print(f'Agent {self.id} reached its goal!')
+        else:
+            self.s_current = s_new
+            pos_coords = stateNameToCoords(self.s_current)
+            self.x, self.y = pos_coords  # Update agent's coordinates
 
 
 

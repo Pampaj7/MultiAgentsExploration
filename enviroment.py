@@ -13,7 +13,7 @@ matplotlib.use('TkAgg')  # oppure 'Qt5Agg', 'Qt4Agg', a seconda di ciò che hai 
 
 # damnit! this solved the problem
 
-class Enviroment:
+class Enviroment(Graph):
     """
     Classe che rappresenta un ambiente bidimensionale esplorato da agenti.
     """
@@ -29,15 +29,18 @@ class Enviroment:
         self.obstacles = []
         self.voronoi_cells = {}
         self.frontier_points= {}
-        self.graph = Graph
+        self.graph = {}
         self.init()
 
     def init(self):
         self.grid = np.full((self.width, self.height), 0.5)  
-
-
-        
-
+        self.frontier_points = {agent.id: [] for agent in self.agents}
+        for agent in self.agents:
+            for x in range(self.width):
+                for y in range(self.height):
+                    if np.linalg.norm(np.array([agent.x, agent.y]) - np.array([x, y])) <= agent.vision:
+                        self.frontier_points[agent.id].append((x, y))
+        self.build_graph()
 
     def add_agent(self, agent):
         """
@@ -155,7 +158,7 @@ class Enviroment:
         """
         Update the frontier points of the environment.
         """
-        self.frontier_points = {agent.id: [] for agent in self.agents}
+        
         for agent_id, cells in self.voronoi_cells.items():
             self.frontier_points[agent_id] = []
             for (x, y) in cells:
@@ -233,6 +236,7 @@ class Enviroment:
                 agent.explore()  # Ogni agente esplora (fa un passo)
 
             self.update_map() 
+            self.update_graph()
             self.update_frontier()  
             self.update_obstacles() 
             self.render(ax)  # Rende la mappa aggiornata
@@ -248,21 +252,36 @@ class Enviroment:
         """
         return f"Ambiente {self.width}x{self.height} con {len(self.agents)} agenti."
 
-    def generateGraphFromGrid(self):
+    def update_graph(self):#TODO: questa è sbagliata di sicuro
+        for agent in self.agents:
+            for (x, y), occupancy in agent.visited_cells.items():
+                if 0 <= x < self.width and 0 <= y < self.height:
+                    self.graph.cells[x][y] = occupancy
+
+    def build_graph(self):
         edge = 1
-        for x in range(self.width):
-            for y in range(self.height):
-                node = Node(f'x{x}y{y}')
-                if x > 0:  # not left edge
-                    node.parents[f'x{x-1}y{y}'] = edge
-                    node.children[f'x{x-1}y{y}'] = edge
-                if x < self.width - 1:  # not right edge
-                    node.parents[f'x{x+1}y{y}'] = edge
-                    node.children[f'x{x+1}y{y}'] = edge
-                if y > 0:  # not bottom edge
-                    node.parents[f'x{x}y{y-1}'] = edge
-                    node.children[f'x{x}y{y-1}'] = edge
-                if y < self.height - 1:  # not top edge
-                    node.parents[f'x{x}y{y+1}'] = edge
-                    node.children[f'x{x}y{y+1}'] = edge
-                self.graph[f'x{x}y{y}'] = node
+        for agent in self.agents:
+            vision = agent.vision  # Agent's vision range
+
+            for i in range(max(0, agent.y - vision), min(self.height, agent.y  + vision + 1)):
+                for j in range(max(0, agent.x  - vision), min(self.width, agent.x  + vision + 1)):
+                    node_id = f'x{i}y{j}'
+                    if node_id not in self.graph:  # Add only if not already in graph
+                        node = Node(node_id)
+
+                        if i > 0 and f'x{i-1}y{j}' in self.graph:  # Top neighbor
+                            node.parents[f'x{i-1}y{j}'] = edge
+                            node.children[f'x{i-1}y{j}'] = edge
+                        if i + 1 < self.y_dim and f'x{i+1}y{j}' in self.graph:  # Bottom neighbor
+                            node.parents[f'x{i+1}y{j}'] = edge
+                            node.children[f'x{i+1}y{j}'] = edge
+                        if j > 0 and f'x{i}y{j-1}' in self.graph:  # Left neighbor
+                            node.parents[f'x{i}y{j-1}'] = edge
+                            node.children[f'x{i}y{j-1}'] = edge
+                        if j + 1 < self.x_dim and f'x{i}y{j+1}' in self.graph:  # Right neighbor
+                            node.parents[f'x{i}y{j+1}'] = edge
+                            node.children[f'x{i}y{j+1}'] = edge
+
+                        self.graph[node_id] = node  # Add node to the graph
+        
+

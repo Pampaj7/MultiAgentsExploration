@@ -28,5 +28,5 @@ def create_video(n, frames=100, interval=1000 / 30):
     return anim
 
 
-# Esegui l'animazione
-#anim = create_video(100)
+def stateNameToCoords(name):
+    return [int(name.split('x')[1].split('y')[0]), int(name.split('x')[1].split('y')[1])]

@@ -27,6 +27,8 @@ class Node:
 class Graph:
     def __init__(self):
         self.graph = {}
+        self.start = {}  # Dictionary to store start nodes for each agent
+        self.goals = {}   # Dictionary to store goal nodes for each agent
 
     def __str__(self):
         msg = 'Graph:'
@@ -38,17 +40,17 @@ class Graph:
     def __repr__(self):
         return self.__str__()
 
-    def setStart(self, id):
-        if(self.graph[id]):
-            self.start = id
+    def setStart(self, id, agent_id):
+        if id in self.graph:  # Check if the node exists in the graph
+            self.start[agent_id] = id
         else:
-            raise ValueError('start id not in graph')
+            raise ValueError(f'Start ID {id} not found in graph.')
 
-    def setGoal(self, id):
-        if(self.graph[id]):
-            self.goal = id
+    def setGoal(self, id, agent_id):
+        if id in self.graph:  # Check if the node exists in the graph
+            self.goals[agent_id] = id
         else:
-            raise ValueError('goal id not in graph')
+            raise ValueError(f'Goal ID {id} not found in graph.')
         
     def addNodeToGraph(self, id, neighbors, edge=1):
         node = Node(id)
