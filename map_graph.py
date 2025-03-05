@@ -44,7 +44,7 @@ class Graph:
         if id in self.graph:  # Check if the node exists in the graph
             self.start[agent_id] = id
         else:
-            raise ValueError(f'Start ID {id} not found in graph.')
+            raise ValueError(f'Start ID {id} not found in graph. Available nodes: {list(self.graph.keys())}')
 
     def setGoal(self, id, agent_id):
         if id in self.graph:  # Check if the node exists in the graph
@@ -53,10 +53,14 @@ class Graph:
             raise ValueError(f'Goal ID {id} not found in graph.')
         
     def addNodeToGraph(self, id, neighbors, edge=1):
-        node = Node(id)
+        if id in self.graph:
+            node = self.graph[id]
+        else:
+            node = Node(id)
+        
         for i in neighbors:
-            # print(i)
             node.parents[i] = edge
             node.children[i] = edge
+        
         self.graph[id] = node
         

@@ -16,6 +16,10 @@ def main():
         x, y = random.randint(0, env.width - 1), random.randint(0, env.height - 1)
         agent = Agent(id=i, x=x, y=y, enviroment=env)
         env.add_agent(agent)
+    env.build_graph()
+    env.init_env()
+    for agent in env.agents:
+        agent.init_d_star()
     
     for i in range(num_obstacles):
         while True:
@@ -23,6 +27,7 @@ def main():
             if not any(agent.x == x and agent.y == y for agent in env.agents):
                 env.add_obstacle(Obstacle(x, y, env))
                 break
+    
     env.update_voronoi()
 
     print(f"Creato ambiente {env.width}x{env.height} con {len(env.agents)} agenti e {len(env.obstacles)} ostacoli.")

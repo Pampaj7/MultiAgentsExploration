@@ -24,23 +24,22 @@ class Enviroment(Graph):
         """
         self.width = width
         self.height = height
-        self.grid = None # contiene la probabilità di essere occupata
+        self.grid = np.full((self.width, self.height), 0.5) 
         self.agents = []
         self.obstacles = []
         self.voronoi_cells = {}
         self.frontier_points= {}
         self.graph = {}
-        self.init()
 
-    def init(self):
-        self.grid = np.full((self.width, self.height), 0.5)  
+    def init_env(self):
+        self.start = {agent.id: None for agent in self.agents}
+        self.goals = {agent.id: None for agent in self.agents}
         self.frontier_points = {agent.id: [] for agent in self.agents}
         for agent in self.agents:
             for x in range(self.width):
                 for y in range(self.height):
                     if np.linalg.norm(np.array([agent.x, agent.y]) - np.array([x, y])) <= agent.vision:
                         self.frontier_points[agent.id].append((x, y))
-        self.build_graph()
 
     def add_agent(self, agent):
         """
@@ -231,9 +230,9 @@ class Enviroment(Graph):
             Funzione di aggiornamento per ogni fotogramma dell'animazione.
             """
             # Ogni agente esegue un movimento per ogni fotogramma
-            for agent in self.agents:
+            #for agent in self.agents:
                 # per ogni agente lanciamo la funzione di explore ctlr+b to go
-                agent.explore()  # Ogni agente esplora (fa un passo)
+                #agent.explore()  # Ogni agente esplora (fa un passo)
 
             self.update_map() 
             self.update_graph()
@@ -252,19 +251,30 @@ class Enviroment(Graph):
         """
         return f"Ambiente {self.width}x{self.height} con {len(self.agents)} agenti."
 
-    def update_graph(self):#TODO: questa è sbagliata di sicuro
-        for agent in self.agents:
-            for (x, y), occupancy in agent.visited_cells.items():
-                if 0 <= x < self.width and 0 <= y < self.height:
-                    self.graph.cells[x][y] = occupancy
+    def update_graph(self):
+        for agent in self.agents:  # Loop through all agents
+            for cell in agent.visited_cells:  # Loop through all visited cells
+                x, y = cell  # Extract coordinates
+                id = f'x{x}y{y}'  # Convert to string ID
+
+                # Find neighbors (4-connected grid: up, down, left, right)
+                neighbors = []
+                possible_neighbors = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
+
+                for nx, ny in possible_neighbors:
+                    if (nx, ny) in agent.visited_cells:  # Only add known visited cells
+                        neighbors.append(f'x{nx}y{ny}')
+
+                # Call addNodeToGraph to add/update the node in the graph
+                self.addNodeToGraph(id, neighbors)
 
     def build_graph(self):
         edge = 1
         for agent in self.agents:
             vision = agent.vision  # Agent's vision range
 
-            for i in range(max(0, agent.y - vision), min(self.height, agent.y  + vision + 1)):
-                for j in range(max(0, agent.x  - vision), min(self.width, agent.x  + vision + 1)):
+            for i in range(max(0, agent.x - vision), min(self.width, agent.x + vision + 1)):
+                for j in range(max(0, agent.y - vision), min(self.height, agent.y + vision + 1)):
                     node_id = f'x{i}y{j}'
                     if node_id not in self.graph:  # Add only if not already in graph
                         node = Node(node_id)
@@ -272,13 +282,13 @@ class Enviroment(Graph):
                         if i > 0 and f'x{i-1}y{j}' in self.graph:  # Top neighbor
                             node.parents[f'x{i-1}y{j}'] = edge
                             node.children[f'x{i-1}y{j}'] = edge
-                        if i + 1 < self.y_dim and f'x{i+1}y{j}' in self.graph:  # Bottom neighbor
+                        if i + 1 < self.height and f'x{i+1}y{j}' in self.graph:  # Bottom neighbor
                             node.parents[f'x{i+1}y{j}'] = edge
                             node.children[f'x{i+1}y{j}'] = edge
                         if j > 0 and f'x{i}y{j-1}' in self.graph:  # Left neighbor
                             node.parents[f'x{i}y{j-1}'] = edge
                             node.children[f'x{i}y{j-1}'] = edge
-                        if j + 1 < self.x_dim and f'x{i}y{j+1}' in self.graph:  # Right neighbor
+                        if j + 1 < self.width and f'x{i}y{j+1}' in self.graph:  # Right neighbor
                             node.parents[f'x{i}y{j+1}'] = edge
                             node.children[f'x{i}y{j+1}'] = edge
 
