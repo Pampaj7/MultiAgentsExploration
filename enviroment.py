@@ -6,6 +6,7 @@ from scipy.spatial import Voronoi, voronoi_plot_2d, cKDTree
 import matplotlib.colors as mcolors
 import random
 from map_graph import Node,Graph
+from utils import stateNameToCoords
 
 
 matplotlib.use('TkAgg')  # oppure 'Qt5Agg', 'Qt4Agg', a seconda di ciò che hai installato
@@ -36,10 +37,13 @@ class Enviroment(Graph):
         self.goals = {agent.id: None for agent in self.agents}
         self.frontier_points = {agent.id: [] for agent in self.agents}
         for agent in self.agents:
-            for x in range(self.width):
-                for y in range(self.height):
-                    if np.linalg.norm(np.array([agent.x, agent.y]) - np.array([x, y])) <= agent.vision:
-                        self.frontier_points[agent.id].append((x, y))
+            vision = agent.vision  # Agent's vision range
+            for i in range(max(0, agent.x - vision), min(self.width, agent.x + vision + 1)):
+                for j in range(max(0, agent.y - vision), min(self.height, agent.y + vision + 1)):
+                    if i == max(0, agent.x - vision) or i == min(self.width, agent.x + vision) or j == max(0, agent.y - vision) or j == min(self.height, agent.y + vision):
+                        self.frontier_points[agent.id].append((i, j))
+
+
 
     def add_agent(self, agent):
         """
@@ -160,15 +164,7 @@ class Enviroment(Graph):
         
         for agent_id, cells in self.voronoi_cells.items():
             self.frontier_points[agent_id] = []
-            for (x, y) in cells:
-                if self.grid[x, y] == 0.5:
-                    neighbors = [
-                    (x2, y2) for x2 in range(x-1, x+2) 
-                    for y2 in range(y-1, y+2) 
-                    if 0 <= x2 < self.width and 0 <= y2 < self.height and (x2 != x or y2 != y)
-                    ]
-                    if any(self.grid[nx, ny] != 0.5 for nx, ny in neighbors):
-                        self.frontier_points[agent_id].append((x, y))
+
 
     def update_obstacles(self):
         """
@@ -201,23 +197,43 @@ class Enviroment(Graph):
 
         # Usa pcolormesh per colorare le regioni Voronoi
         ax.pcolormesh(np.arange(self.width + 1), np.arange(self.height + 1), voronoi_grid.T,
-                cmap=cmap_voronoi, norm=norm_voronoi, alpha=0.4)  # `alpha=0.4` rende le regioni semitrasparenti
+                    cmap=cmap_voronoi, norm=norm_voronoi, alpha=0.4)  # `alpha=0.4` rende le regioni semitrasparenti
 
-        # Disegna le posizioni degli agenti
-        agent_positions = np.array([(agent.y, agent.x) for agent in self.agents])  # Inverti x e y per Matplotlib
-        
-        ax.scatter(agent_positions[:, 0] + 0.5, agent_positions[:, 1] + 0.5,
-            color='red', label='Agenti', marker='x', s=100)
+        # Disegna le posizioni degli agenti (Usando correttamente y, x per Matplotlib)
+        for agent in self.agents:
+            ax.scatter(agent.x + 0.5, agent.y + 0.5,  # X e Y sono scambiati rispetto a Matplotlib
+                    color='red', label=f'Agente {agent.id}', marker='x', s=100, zorder=3)
 
         # Stampa la probabilità in ogni cella
         for x in range(self.width):
             for y in range(self.height):
                 ax.text(y + 0.5, x + 0.5, f'{self.grid[x, y]:.2f}', color='black', ha='center', va='center', fontsize=8)
         
+        # Disegna i punti di frontiera
+        for agent_id, points in self.frontier_points.items():
+            if points:  # Ensure there are points to plot
+                frontier_positions = np.array(points)  # Convert to NumPy array
+                if frontier_positions.ndim == 2 and frontier_positions.shape[1] == 2:
+                    ax.scatter(
+                        frontier_positions[:, 0] + 0.5,  # X-coordinates
+                        frontier_positions[:, 1] + 0.5,  # Y-coordinates
+                        color='blue',
+                        label=f'Frontiera Agente {agent_id}',
+                        marker='o',
+                        s=50,
+                        zorder=2
+                    )
+        
+        for node_id in self.graph.keys():
+            x, y = stateNameToCoords(node_id)  # Swap x and y to align with Matplotlib
+            ax.scatter(x + 0.5, y + 0.5, color='green', s=30, zorder=2)
+        
         ax.set_title('Ambiente - Esplorazione con Voronoi')
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.legend(loc='upper left')
+
+
 
     def animate(self, steps=10):
         # funziona partenza
@@ -236,7 +252,7 @@ class Enviroment(Graph):
 
             self.update_map() 
             self.update_graph()
-            self.update_frontier()  
+            #self.update_frontier()  
             self.update_obstacles() 
             self.render(ax)  # Rende la mappa aggiornata
             return []
@@ -293,5 +309,13 @@ class Enviroment(Graph):
                             node.children[f'x{i}y{j+1}'] = edge
 
                         self.graph[node_id] = node  # Add node to the graph
+        self.print_graph_values()
+    def print_graph_values(self):
+        """
+        Print all the rhs and g values inside the graph.
+        """
+        for node_id, node in self.graph.items():
+            print(f"Node {node_id}: rhs = {node.rhs}, g = {node.g}")
+
         
 

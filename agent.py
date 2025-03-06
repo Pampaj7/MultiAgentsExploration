@@ -24,7 +24,7 @@ class Agent:
         self.x = x
         self.y = y
         self.sensing_accuracy = 0.9  # Precisione del sensore dell'agente
-        self.vision = 2 # Raggio di visione dell'agente
+        self.vision = 3 # Raggio di visione dell'agente
         self.enviroment = enviroment
         self.visited_cells = {}  # Celle visitate dall'agente 
 
