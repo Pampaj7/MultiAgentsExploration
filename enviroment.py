@@ -42,16 +42,16 @@ class Enviroment(Graph):
                 for j in range(max(0, agent.y - vision), min(self.height, agent.y + vision + 1)):
                     if i == max(0, agent.x - vision) or i == min(self.width, agent.x + vision) or j == max(0, agent.y - vision) or j == min(self.height, agent.y + vision):
                         self.frontier_points[agent.id].append((i, j))
-        for agent in self.agents:
-            for i in range(max(0, agent.x - vision), min(self.width, agent.x + vision + 1)):
-                for j in range(max(0, agent.y - vision), min(self.height, agent.y + vision + 1)):
-                    pos = [obs.position for obs in self.obstacles]
-                
-                    p_obs_given_occupied = agent.sensing_accuracy if (i,j) in pos else 1 - agent.sensing_accuracy
-                    p_obs_given_free = 1 - agent.sensing_accuracy if (i,j) in pos else agent.sensing_accuracy
+        pos = {obs.position for obs in self.obstacles}  # Set for fast lookup
 
-                    # Bayesian update and store result
-                    self.grid[i,j] = self.bayes_update(self.grid[i,j], p_obs_given_occupied, p_obs_given_free)
+        for agent in self.agents:
+            for i in range(max(0, agent.x - agent.vision), min(self.width, agent.x + agent.vision + 1)):
+                for j in range(max(0, agent.y - agent.vision), min(self.height, agent.y + agent.vision + 1)):
+                    p_obs_given_occupied, p_obs_given_free = (
+                        (agent.sensing_accuracy, 1 - agent.sensing_accuracy) if (i, j) in pos 
+                        else (1 - agent.sensing_accuracy, agent.sensing_accuracy)
+                    )
+                    self.grid[i, j] = self.bayes_update(self.grid[i, j], p_obs_given_occupied, p_obs_given_free)
 
     def add_agent(self, agent):
         """
@@ -73,20 +73,26 @@ class Enviroment(Graph):
         utilizza le probabilità accumulate per ogni cella.
         """
         for agent in self.agents:
-            for (x, y), occupancy in agent.visited_cells.items():  # Get both coordinates and occupancy
+            for (x, y), occupied in agent.visited_cells.items():  # Directly iterate over visited cells
                 if 0 <= x < self.width and 0 <= y < self.height:
-                    # Determine sensor likelihoods based on observation
-                    p_obs_given_occupied = agent.sensing_accuracy if occupancy == True else 1 - agent.sensing_accuracy
-                    p_obs_given_free = 1 - agent.sensing_accuracy if occupancy == True else agent.sensing_accuracy
+                    # Compute probabilities explicitly
+                    if occupied:
+                        p_obs_given_occupied = agent.sensing_accuracy
+                        p_obs_given_free = 1 - agent.sensing_accuracy
+                    else:
+                        p_obs_given_occupied = 1 - agent.sensing_accuracy
+                        p_obs_given_free = agent.sensing_accuracy
 
-                    # Bayesian update and store result
+                    # Bayesian update
                     self.grid[x, y] = self.bayes_update(self.grid[x, y], p_obs_given_occupied, p_obs_given_free)
-            for x, y in np.ndindex(self.grid.shape):
-                if (x, y) not in agent.visited_cells:
-                    if self.grid[x, y] < 0.5:
-                        self.grid[x, y] += 0.01
-                    elif self.grid[x, y] > 0.5:
-                        self.grid[x, y] -= 0.01
+
+
+        for x, y in np.ndindex(self.grid.shape):
+            if (x, y) not in agent.visited_cells:
+                if self.grid[x, y] < 0.5:
+                    self.grid[x, y] += 0.01
+                elif self.grid[x, y] > 0.5:
+                    self.grid[x, y] -= 0.01
                     
     def bayes_update(self, prior, p_obs_given_occupied, p_obs_given_free):
         """
@@ -190,7 +196,6 @@ class Enviroment(Graph):
 
         self.frontier_points = new_frontier  # Update the stored frontier points
 
-
     def update_obstacles(self):
         """
         Update the obstacles in the environment.
@@ -285,7 +290,7 @@ class Enviroment(Graph):
             self.update_map() 
             self.update_graph()
             self.update_frontier()  
-            self.update_obstacles() 
+            #self.update_obstacles() 
             self.render(ax)  # Rende la mappa aggiornata
             return []
 

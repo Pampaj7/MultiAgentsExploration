@@ -54,8 +54,7 @@ class Agent:
             _, self.queue, self.k_m = initDStarLite(self.enviroment, self.queue, start_id, goal_id, self.k_m, self.id)
         
 
-    def explore(self): #TODO qui c'è da metterci move and rescan
-
+    def explore(self):
         pos = f'x{self.x}y{self.y}'
         s_new, self.k_m = moveAndRescan(
             self.enviroment, self.queue, pos, self.vision, self.k_m, self.id
@@ -65,14 +64,17 @@ class Agent:
             print(f'Agent {self.id} reached its goal!')
         else:
             self.s_current = s_new
-            pos_coords = stateNameToCoords(self.s_current)
-            self.x, self.y = pos_coords  # Update agent's coordinates
+            self.x, self.y = stateNameToCoords(self.s_current)  # Update agent's coordinates
 
-        # Mark cells within vision range as visited
-        self.visited_cells = {}
+        obstacle_positions = {(obs.position) for obs in self.enviroment.obstacles}  # ✅ Now a set
+        self.visited_cells ={}
         for i in range(max(0, self.x - self.vision), min(self.enviroment.width, self.x + self.vision + 1)):
-                for j in range(max(0, self.y - self.vision), min(self.enviroment.height, self.y + self.vision + 1)):
-                    self.visited_cells[i,j] = any((i,j) == pos for pos in self.enviroment.obstacles)
+            for j in range(max(0, self.y - self.vision), min(self.enviroment.height, self.y + self.vision + 1)):
+                if (i, j) in obstacle_positions:
+                    self.visited_cells[(i,j)]= True
+                else: self.visited_cells[(i,j)]= False
+
+
 
 
 

@@ -10,23 +10,23 @@ def main():
 
     # 📌 2. Creiamo 5 agenti in posizioni casuali
     num_agents = 1
-    num_obstacles = 5
+    num_obstacles = 30
 
     for i in range(num_agents):
         x, y = random.randint(0, env.width - 1), random.randint(0, env.height - 1)
         agent = Agent(id=i, x=x, y=y, enviroment=env)
         env.add_agent(agent)
-    env.build_graph()
-    env.init_env()
-    for agent in env.agents:
-        agent.init_d_star()
-    
+
     for i in range(num_obstacles):
         while True:
             x, y = random.randint(0, env.width - 1), random.randint(0, env.height - 1)
             if not any(agent.x == x and agent.y == y for agent in env.agents):
                 env.add_obstacle(Obstacle(x, y, env))
                 break
+    env.build_graph()
+    env.init_env()
+    for agent in env.agents:
+        agent.init_d_star()
     
     env.update_voronoi()
 
