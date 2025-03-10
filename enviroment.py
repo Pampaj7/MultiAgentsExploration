@@ -76,8 +76,8 @@ class Enviroment(Graph):
             for (x, y), occupancy in agent.visited_cells.items():  # Get both coordinates and occupancy
                 if 0 <= x < self.width and 0 <= y < self.height:
                     # Determine sensor likelihoods based on observation
-                    p_obs_given_occupied = agent.sensing_accuracy if occupancy == 1 else 1 - agent.sensing_accuracy
-                    p_obs_given_free = 1 - agent.sensing_accuracy if occupancy == 1 else agent.sensing_accuracy
+                    p_obs_given_occupied = agent.sensing_accuracy if occupancy == True else 1 - agent.sensing_accuracy
+                    p_obs_given_free = 1 - agent.sensing_accuracy if occupancy == True else agent.sensing_accuracy
 
                     # Bayesian update and store result
                     self.grid[x, y] = self.bayes_update(self.grid[x, y], p_obs_given_occupied, p_obs_given_free)
@@ -169,9 +169,27 @@ class Enviroment(Graph):
         """
         Update the frontier points of the environment.
         """
-        
-        for agent_id, cells in self.voronoi_cells.items():
-            self.frontier_points[agent_id] = []
+   
+        new_frontier = {agent.id: [] for agent in self.agents}  # Initialize empty lists
+
+        for agent in self.agents:
+            vision = agent.vision  # Agent's vision range
+            voronoi_cells = self.voronoi_cells[agent.id]  # Get agent's Voronoi cells
+
+            for x, y in voronoi_cells:  # Only check cells inside the agent's Voronoi region
+                if self.grid[x, y] == 0.5:  # Unexplored cells are not frontiers themselves
+                    continue
+
+                # Check neighbors to see if this is a frontier point
+                neighbors = [(x-1, y), (x+1, y), (x, y-1), (x, y+1)]
+                for nx, ny in neighbors:
+                    if 0 <= nx < self.width and 0 <= ny < self.height:
+                        if self.grid[nx, ny] == 0.5:  # Unknown neighbor found
+                            new_frontier[agent.id].append((x, y))
+                            break  # No need to check other neighbors
+
+        self.frontier_points = new_frontier  # Update the stored frontier points
+
 
     def update_obstacles(self):
         """
@@ -266,7 +284,7 @@ class Enviroment(Graph):
 
             self.update_map() 
             self.update_graph()
-            #self.update_frontier()  
+            self.update_frontier()  
             self.update_obstacles() 
             self.render(ax)  # Rende la mappa aggiornata
             return []
@@ -330,12 +348,7 @@ class Enviroment(Graph):
                                 self.graph[neighbor_id].children[node_id] = edge
 
     
-    def print_graph_values(self):
-        """
-        Print all the rhs and g values inside the graph.
-        """
-        for node_id, node in self.graph.items():
-            print(f"Node {node_id}: rhs = {node.rhs}, g = {node.g}")
+
 
         
 

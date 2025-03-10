@@ -68,5 +68,11 @@ class Agent:
             pos_coords = stateNameToCoords(self.s_current)
             self.x, self.y = pos_coords  # Update agent's coordinates
 
+        # Mark cells within vision range as visited
+        self.visited_cells = {}
+        for i in range(max(0, self.x - self.vision), min(self.enviroment.width, self.x + self.vision + 1)):
+                for j in range(max(0, self.y - self.vision), min(self.enviroment.height, self.y + self.vision + 1)):
+                    self.visited_cells[i,j] = any((i,j) == pos for pos in self.enviroment.obstacles)
+
 
 
