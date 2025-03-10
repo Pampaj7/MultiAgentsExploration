@@ -49,6 +49,9 @@ def computeShortestPath(graph, queue, s_start, k_m, agent_id):
         k_old = topKey(queue)
         u = heapq.heappop(queue)[2]
 
+        print(f"Processing node {u}: g = {graph.graph[u].g}, rhs = {graph.graph[u].rhs}")
+
+
         if k_old < calculateKey(graph, u, s_start, k_m):
             heapq.heappush(queue, calculateKey(graph, u, s_start, k_m) + (u,))
         elif graph.graph[u].g > graph.graph[u].rhs:

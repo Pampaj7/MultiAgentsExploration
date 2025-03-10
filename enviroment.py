@@ -53,8 +53,6 @@ class Enviroment(Graph):
                     # Bayesian update and store result
                     self.grid[i,j] = self.bayes_update(self.grid[i,j], p_obs_given_occupied, p_obs_given_free)
 
-
-
     def add_agent(self, agent):
         """
         Aggiunge un agente alla simulazione.
@@ -230,16 +228,26 @@ class Enviroment(Graph):
                             label=f'Frontiera Agente {agent_id}',
                             marker='o',
                             s=50)
+        
+        # Disegna gli ostacoli  
+        for obs in self.obstacles:
+            ax.scatter(obs.position[1] + 0.5, obs.position[0] + 0.5, color='purple', marker='s', s=50)
+        
+        # Disegna il Goal
+        for agent_id, goal in self.goals.items():
+            if goal is not None:
+                goal_coords = stateNameToCoords(goal)
+                ax.scatter(goal_coords[1] + 0.5, goal_coords[0] + 0.5, color='orange', marker='x', s=100, label=f'Goal Agente {agent_id}')
 
         # Segna ogni punto all'interno del grafo con un punto verde
-        for node_id in self.graph.keys():
-            y, x  = stateNameToCoords(node_id)  # Swap x and y
-            ax.scatter(x + 0.5, y + 0.5, color='green', s=30, zorder=2)  # Corretta posizione e dimensione
+        # for node_id in self.graph.keys():
+        #     y, x  = stateNameToCoords(node_id)  # Swap x and y
+        #     ax.scatter(x + 0.5, y + 0.5, color='green', s=30, zorder=2)  # Corretta posizione e dimensione
 
         ax.set_title('Ambiente - Esplorazione con Voronoi')
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
-        ax.legend(loc='upper left')
+        #ax.legend(loc='upper left')
 
     def animate(self, steps=10):
         # funziona partenza
@@ -298,23 +306,29 @@ class Enviroment(Graph):
             for i in range(max(0, agent.x - vision), min(self.width, agent.x + vision + 1)):
                 for j in range(max(0, agent.y - vision), min(self.height, agent.y + vision + 1)):
                     node_id = f'x{i}y{j}'
-                    if node_id not in self.graph:  # Add only if not already in graph
-                        node = Node(node_id)
 
-                        if i > 0 and f'x{i-1}y{j}' in self.graph:  # Top neighbor
-                            node.parents[f'x{i-1}y{j}'] = edge
-                            node.children[f'x{i-1}y{j}'] = edge
-                        if i + 1 < self.height and f'x{i+1}y{j}' in self.graph:  # Bottom neighbor
-                            node.parents[f'x{i+1}y{j}'] = edge
-                            node.children[f'x{i+1}y{j}'] = edge
-                        if j > 0 and f'x{i}y{j-1}' in self.graph:  # Left neighbor
-                            node.parents[f'x{i}y{j-1}'] = edge
-                            node.children[f'x{i}y{j-1}'] = edge
-                        if j + 1 < self.width and f'x{i}y{j+1}' in self.graph:  # Right neighbor
-                            node.parents[f'x{i}y{j+1}'] = edge
-                            node.children[f'x{i}y{j+1}'] = edge
+                    # If node does not exist, create it
+                    if node_id not in self.graph:
+                        self.graph[node_id] = Node(node_id)
 
-                        self.graph[node_id] = node  # Add node to the graph
+                    node = self.graph[node_id]  # Get the node reference
+
+                    # Check and connect with existing neighbors
+                    neighbors = [
+                        (i - 1, j),  # Top
+                        (i + 1, j),  # Bottom
+                        (i, j - 1),  # Left
+                        (i, j + 1)   # Right
+                    ]
+                    for ni, nj in neighbors:
+                        neighbor_id = f'x{ni}y{nj}'
+                        if 0 <= ni < self.height and 0 <= nj < self.width:  # Ensure it's in bounds
+                            if neighbor_id in self.graph:  # If neighbor already exists, connect them
+                                node.parents[neighbor_id] = edge
+                                node.children[neighbor_id] = edge
+                                self.graph[neighbor_id].parents[node_id] = edge
+                                self.graph[neighbor_id].children[node_id] = edge
+
     
     def print_graph_values(self):
         """
