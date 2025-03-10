@@ -260,9 +260,9 @@ class Enviroment(Graph):
             Funzione di aggiornamento per ogni fotogramma dell'animazione.
             """
             # Ogni agente esegue un movimento per ogni fotogramma
-            #for agent in self.agents:
+            for agent in self.agents:
                 # per ogni agente lanciamo la funzione di explore ctlr+b to go
-                #agent.explore()  # Ogni agente esplora (fa un passo)
+                agent.explore()  # Ogni agente esplora (fa un passo)
 
             self.update_map() 
             self.update_graph()

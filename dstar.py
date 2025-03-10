@@ -94,7 +94,7 @@ def scanForObstacles(graph, queue, s_current, scan_range, k_m):
     if scan_range >= 1:
         for neighbor in graph.graph[s_current].children:
             neighbor_coords = stateNameToCoords(neighbor)
-            states_to_update[neighbor] = graph.cells[neighbor_coords[1]
+            states_to_update[neighbor] = graph.grid[neighbor_coords[1]
                                                      ][neighbor_coords[0]]
         range_checked = 1
     # print(states_to_update)
@@ -106,7 +106,7 @@ def scanForObstacles(graph, queue, s_current, scan_range, k_m):
             for neighbor in graph.graph[state].children:
                 if neighbor not in new_set:
                     neighbor_coords = stateNameToCoords(neighbor)
-                    new_set[neighbor] = graph.cells[neighbor_coords[1]
+                    new_set[neighbor] = graph.grid[neighbor_coords[1]
                                                     ][neighbor_coords[0]]
         range_checked += 1
         states_to_update = new_set
@@ -140,13 +140,13 @@ def moveAndRescan(graph, queue, s_current, scan_range, k_m, agent_id):
         s_new = nextInShortestPath(graph, s_current)
         new_coords = stateNameToCoords(s_new)
 
-        if(graph.cells[new_coords[1]][new_coords[0]] == -1):  # just ran into new obstacle
+        if(graph.grid[new_coords[1]][new_coords[0]] > 0.5):  # just ran into new obstacle
             s_new = s_current  # need to hold tight and scan/replan first
 
         results = scanForObstacles(graph, queue, s_new, scan_range, k_m)
         # print(graph)
         k_m += heuristic_from_s(graph, s_last, s_new)
-        computeShortestPath(graph, queue, s_current, k_m)
+        computeShortestPath(graph, queue, s_current, k_m, agent_id)
 
         return s_new, k_m
 
