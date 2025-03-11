@@ -49,9 +49,6 @@ def computeShortestPath(graph, queue, s_start, k_m, agent_id):
         k_old = topKey(queue)
         u = heapq.heappop(queue)[2]
 
-        print(f"Processing node {u}: g = {graph.graph[u].g}, rhs = {graph.graph[u].rhs}")
-
-
         if k_old < calculateKey(graph, u, s_start, k_m):
             heapq.heappush(queue, calculateKey(graph, u, s_start, k_m) + (u,))
         elif graph.graph[u].g > graph.graph[u].rhs:
@@ -63,10 +60,6 @@ def computeShortestPath(graph, queue, s_start, k_m, agent_id):
             updateVertex(graph, queue, u, s_start, k_m, agent_id)
             for i in graph.graph[u].parents:
                 updateVertex(graph, queue, i, s_start, k_m, agent_id)
-
-        # 🔴 Ensure rhs values are properly updated
-        if graph.graph[s_start].rhs == float('inf'):
-            print(f"Warning: No valid path to {s_start}")
 
 
 def nextInShortestPath(graph, s_current):

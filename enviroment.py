@@ -65,6 +65,7 @@ class Enviroment(Graph):
         Aggiunge un ostacolo all'ambiente.
         """
         self.obstacles.append(obstacle)
+        print(f"Obstacle added at position: ({obstacle.position})")
 
     def update_map(self):
         """
@@ -142,7 +143,10 @@ class Enviroment(Graph):
                             self.voronoi_cells[self.agents[1].id].append((x, y))
             else:
                 # General case: calculate slope and perpendicular slope
-                slope = (self.agents[1].x - self.agents[0].x) / (self.agents[1].y - self.agents[0].y)
+                if self.agents[1].y != self.agents[0].y:
+                    slope = (self.agents[1].x - self.agents[0].x) / (self.agents[1].y - self.agents[0].y)
+                else:
+                    slope = float('inf')  # Use infinity to represent a vertical line
                 perp_slope = -1 / slope
 
                 for x in range(self.width):
@@ -223,11 +227,11 @@ class Enviroment(Graph):
         voronoi_grid = np.full((self.width, self.height), -1)  # Inizializza griglia con -1 (nessuna regione)
         for agent_id, cells in self.voronoi_cells.items():
             for (x, y) in cells:
-                voronoi_grid[y, x] = agent_id  # Swap x, y
+                voronoi_grid[x, y] = agent_id  # Swap x, y
 
         # Usa pcolormesh per colorare le regioni Voronoi
         ax.pcolormesh(np.arange(self.width + 1), np.arange(self.height + 1), voronoi_grid.T,
-                    cmap=cmap_voronoi, norm=norm_voronoi, alpha=0.4)  # `alpha=0.4` rende le regioni semitrasparenti
+                    cmap=cmap_voronoi, norm=norm_voronoi, alpha=0.4)
 
         # Disegna le posizioni degli agenti
         agent_positions = np.array([(agent.x, agent.y) for agent in self.agents])  # Correct (x, y) order
@@ -235,10 +239,10 @@ class Enviroment(Graph):
                 color='red', label='Agenti', marker='x', s=100)
 
         # Stampa la probabilità in ogni cella
-        for x in range(self.width):
-            for y in range(self.height):
-                ax.text(y + 0.5, x + 0.5, f'{self.grid[x, y]:.2f}', 
-                        color='black', ha='center', va='center', fontsize=8)
+        # for x in range(self.width):
+        #     for y in range(self.height):
+        #         ax.text(y + 0.5, x + 0.5, f'{self.grid[x, y]:.2f}', 
+        #                 color='black', ha='center', va='center', fontsize=8)
 
         # Disegna i punti di frontiera per ogni agente
         for agent_id, points in self.frontier_points.items():
@@ -262,17 +266,14 @@ class Enviroment(Graph):
                 goal_coords = stateNameToCoords(goal)
                 ax.scatter(goal_coords[1] + 0.5, goal_coords[0] + 0.5, color='orange', marker='x', s=100, label=f'Goal Agente {agent_id}')
 
-        # Segna ogni punto all'interno del grafo con un punto verde
-        # for node_id in self.graph.keys():
-        #     y, x  = stateNameToCoords(node_id)  # Swap x and y
-        #     ax.scatter(x + 0.5, y + 0.5, color='green', s=30, zorder=2)  # Corretta posizione e dimensione
+
 
         ax.set_title('Ambiente - Esplorazione con Voronoi')
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         #ax.legend(loc='upper left')
 
-    def animate(self, steps=10):
+    def animate(self, steps=10, interval=1000):
         # funziona partenza
         fig, ax = plt.subplots()
         ax.set_xlim(0, self.width)
@@ -284,18 +285,17 @@ class Enviroment(Graph):
             """
             # Ogni agente esegue un movimento per ogni fotogramma
             for agent in self.agents:
-                # per ogni agente lanciamo la funzione di explore ctlr+b to go
                 agent.explore()  # Ogni agente esplora (fa un passo)
 
             self.update_map() 
-            self.update_graph()
+            #self.update_graph()
             self.update_frontier()  
             #self.update_obstacles() 
             self.render(ax)  # Rende la mappa aggiornata
             return []
 
         # 10 è il numero di passi totali per tutti gli agenti
-        ani = FuncAnimation(fig, update, frames=steps, interval=1000 / 3)
+        ani = FuncAnimation(fig, update, frames=steps, interval=interval)
         plt.show()
 
     def __str__(self):
@@ -306,18 +306,15 @@ class Enviroment(Graph):
 
     def update_graph(self):
         for agent in self.agents:  # Loop through all agents
-            for cell in agent.visited_cells:  # Loop through all visited cells
-                x, y = cell  # Extract coordinates
+            for (x, y), occupied in agent.visited_cells.items():  # Loop through all visited cells
+                
                 id = f'x{x}y{y}'  # Convert to string ID
 
                 # Find neighbors (4-connected grid: up, down, left, right)
                 neighbors = []
                 possible_neighbors = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
-
-                for nx, ny in possible_neighbors:
-                    if (nx, ny) in agent.visited_cells:  # Only add known visited cells
-                        neighbors.append(f'x{nx}y{ny}')
-
+                
+                neighbors = [f'x{n[0]}y{n[1]}' for n in possible_neighbors if self.grid[n[0]][n[1]] != 0.5]
                 # Call addNodeToGraph to add/update the node in the graph
                 self.addNodeToGraph(id, neighbors)
 
@@ -356,4 +353,3 @@ class Enviroment(Graph):
 
 
         
-
