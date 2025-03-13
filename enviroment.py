@@ -36,13 +36,24 @@ class Enviroment(Graph):
         self.start = {agent.id: None for agent in self.agents}
         self.goals = {agent.id: None for agent in self.agents}
         self.frontier_points = {agent.id: [] for agent in self.agents}
+
+        pos = {obs.position for obs in self.obstacles}  # Set for fast lookup
+
         for agent in self.agents:
             vision = agent.vision  # Agent's vision range
             for i in range(max(0, agent.x - vision), min(self.width, agent.x + vision + 1)):
                 for j in range(max(0, agent.y - vision), min(self.height, agent.y + vision + 1)):
-                    if i == max(0, agent.x - vision) or i == min(self.width, agent.x + vision) or j == max(0, agent.y - vision) or j == min(self.height, agent.y + vision):
-                        self.frontier_points[agent.id].append((i, j))
-        pos = {obs.position for obs in self.obstacles}  # Set for fast lookup
+
+                    # Ensure frontier points do not touch the border of the map
+                    if (
+                        (i == max(0, agent.x - vision) or i == min(self.width - 1, agent.x + vision)) and 0 < i < self.width - 1
+                    ) or (
+                        (j == max(0, agent.y - vision) or j == min(self.height - 1, agent.y + vision)) and 0 < j < self.height - 1
+                    ):
+                        if (i, j) not in pos and (i,j) in self.voronoi_cells[agent.id]:
+                            self.frontier_points[agent.id].append((i, j))
+
+        
 
         for agent in self.agents:
             for i in range(max(0, agent.x - agent.vision), min(self.width, agent.x + agent.vision + 1)):
@@ -174,12 +185,11 @@ class Enviroment(Graph):
             for y in range(self.height):
                 agent_index = grid_assignment[x, y]
                 self.voronoi_cells[index_to_agent[agent_index].id].append((x, y))  # ✅ FIXED HERE
-
+    
     def update_frontier(self):
         """
         Update the frontier points of the environment.
         """
-   
         new_frontier = {agent.id: [] for agent in self.agents}  # Initialize empty lists
 
         for agent in self.agents:
@@ -187,13 +197,17 @@ class Enviroment(Graph):
             voronoi_cells = self.voronoi_cells[agent.id]  # Get agent's Voronoi cells
 
             for x, y in voronoi_cells:  # Only check cells inside the agent's Voronoi region
-                if self.grid[x, y] == 0.5:  # Unexplored cells are not frontiers themselves
+                if self.grid[x, y] >= 0.5:  # Unexplored cells are not frontiers themselves
                     continue
+
+                # Exclude map borders
+                if x == 0 or x == self.width - 1 or y == 0 or y == self.height - 1:
+                    continue  # Skip border cells
 
                 # Check neighbors to see if this is a frontier point
                 neighbors = [(x-1, y), (x+1, y), (x, y-1), (x, y+1)]
                 for nx, ny in neighbors:
-                    if 0 <= nx < self.width and 0 <= ny < self.height:
+                    if 0 < nx < self.width and 0 < ny < self.height:
                         if self.grid[nx, ny] == 0.5:  # Unknown neighbor found
                             new_frontier[agent.id].append((x, y))
                             break  # No need to check other neighbors
@@ -212,6 +226,9 @@ class Enviroment(Graph):
         Visualizza la mappa dell'ambiente usando Matplotlib.
         Mostra la posizione degli agenti e le celle esplorate, evidenziando le celle Voronoi.
         """
+        fig = plt.gcf()
+        fig.set_size_inches(12, 12)  # Imposta la dimensione della finestra a 12x12 pollici
+
         ax.clear()  # Pulisce il grafico prima di ridisegnare
 
         # Visualizza la mappa di base con sfumature di grigio invertite in base alla probabilità
@@ -266,8 +283,6 @@ class Enviroment(Graph):
                 goal_coords = stateNameToCoords(goal)
                 ax.scatter(goal_coords[1] + 0.5, goal_coords[0] + 0.5, color='orange', marker='x', s=100, label=f'Goal Agente {agent_id}')
 
-
-
         ax.set_title('Ambiente - Esplorazione con Voronoi')
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
@@ -288,7 +303,7 @@ class Enviroment(Graph):
                 agent.explore()  # Ogni agente esplora (fa un passo)
 
             self.update_map() 
-            #self.update_graph()
+            self.update_graph()
             self.update_frontier()  
             #self.update_obstacles() 
             self.render(ax)  # Rende la mappa aggiornata
@@ -314,7 +329,7 @@ class Enviroment(Graph):
                 neighbors = []
                 possible_neighbors = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
                 
-                neighbors = [f'x{n[0]}y{n[1]}' for n in possible_neighbors if self.grid[n[0]][n[1]] != 0.5]
+                neighbors = [f'x{n[0]}y{n[1]}' for n in possible_neighbors if 0 <= n[0] < self.width and 0 <= n[1] < self.height and self.grid[n[0]][n[1]] != 0.5]
                 # Call addNodeToGraph to add/update the node in the graph
                 self.addNodeToGraph(id, neighbors)
 
@@ -349,7 +364,17 @@ class Enviroment(Graph):
                                 self.graph[neighbor_id].parents[node_id] = edge
                                 self.graph[neighbor_id].children[node_id] = edge
 
-    
+    def resetAgentPathCosts(self, agent_id):
+        """Reset path information (rhs, g, and other values) only for the specific agent"""
+        
+        # Reset the rhs, g values and queue entries for the current agent's start and goal
+        start_id = f'x{self.agents[agent_id].x}y{self.agents[agent_id].y}'
+        goal_id = self.goals[agent_id]
+        
+        # Set g and rhs to infinity or the initial values for these nodes
+        self.graph[start_id].g = float('inf')
+        self.graph[goal_id].rhs = 0  # The goal always has rhs 0 at the start
+        
 
 
         

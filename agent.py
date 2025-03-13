@@ -42,6 +42,8 @@ class Agent:
         self.enviroment.setStart(start_id, self.id)
         if goal_id:
             self.enviroment.setGoal(goal_id, self.id)
+        
+        print(f"Agent {self.id} new goal: {goal_id}")  # Debugging
         self.run_d_star_lite()
 
     def run_d_star_lite(self):
@@ -53,10 +55,12 @@ class Agent:
             self.queue = []  # Reset priority queue
             self.k_m = 0  # Reset cost adjustment factor
 
+            print(f"Agent {self.id} running D* Lite with start {start_id} and goal {goal_id}")
+            self.enviroment.resetAgentPathCosts(self.id)  # ✅ Reset costs specific to this agent
+
             # Initialize D* Lite and store updated queue and k_m
             _, self.queue, self.k_m = initDStarLite(self.enviroment, self.queue, start_id, goal_id, self.k_m, self.id)
         
-
     def explore(self):
         pos = f'x{self.x}y{self.y}'
         s_new, self.k_m = moveAndRescan(
@@ -64,7 +68,8 @@ class Agent:
         )
 
         if s_new == 'goal':
-            print(f'Agent {self.id} reached its goal!')
+            print(f'Agent {self.id} reached its goal at {self.x, self.y}!')
+            self.init_d_star()  
         else:
             self.s_current = s_new
             self.x, self.y = stateNameToCoords(self.s_current)  # Update agent's coordinates
@@ -79,57 +84,56 @@ class Agent:
 
     def compute_heuristic(self, frontier_points):
         """
-        Combine distance to the agent and the density of unexplored cells around each frontier point.
-        Returns the best frontier point based on this combined heuristic.
+        Selects the best frontier point using a weighted combination of:
+        - Distance to the agent (closer is better)
+        - Density of **truly unexplored** cells (higher is better)
         """
 
         def distance_to_agent(point):
-            # Calculate Euclidean distance squared to avoid unnecessary square roots
+            """ Calculate squared Euclidean distance to the agent """
             return (point[0] - self.x) ** 2 + (point[1] - self.y) ** 2
 
         def density_of_frontier(point):
-            # Calculate the density of unexplored cells around the frontier point
+            """ Count **only truly unexplored (p = 0.5) cells** around the frontier point """
             x, y = point
             unexplored_count = 0
-            for dx in range(-1, 2):  # Check surrounding 3x3 grid (8 neighbors)
+            for dx in range(-1, 2):  # Check 3x3 grid
                 for dy in range(-1, 2):
                     nx, ny = x + dx, y + dy
                     if 0 <= nx < self.enviroment.width and 0 <= ny < self.enviroment.height:
-                        # Assume that the unexplored cells have a probability < 0.5
-                        if self.enviroment.grid[nx, ny] < 0.5:
+                        if self.enviroment.grid[nx, ny] == 0.5:  # Only count fully unexplored cells
                             unexplored_count += 1
             return unexplored_count
 
         def normalize(value, min_val, max_val):
-            """ Normalize value to range [0, 1] """
+            """ Normalize to [0,1], avoiding division by zero """
             return (value - min_val) / (max_val - min_val) if max_val != min_val else 0
 
-        # Step 1: Calculate distances and densities for all frontier points
+        # Step 1: Compute raw distance & density values
         distances = [distance_to_agent(point) for point in frontier_points]
         densities = [density_of_frontier(point) for point in frontier_points]
 
-        # Step 2: Normalize both metrics (we want the closer ones to have higher scores and the denser ones to have higher scores)
-        min_distance = min(distances)
-        max_distance = max(distances)
-        normalized_distances = [normalize(d, min_distance, max_distance) for d in distances]
+        # Step 2: Normalize distances **inverted** (so that closer points are better)
+        min_distance, max_distance = min(distances), max(distances)
+        normalized_distances = [1 - normalize(d, min_distance, max_distance) for d in distances]  # Inverted
 
-        min_density = min(densities)
-        max_density = max(densities)
+        # Step 3: Normalize densities (higher is better)
+        min_density, max_density = min(densities), max(densities)
         normalized_densities = [normalize(d, min_density, max_density) for d in densities]
 
-        # Step 3: Combine the distance and density into one heuristic value
-        # You can adjust the weights to prioritize one metric over the other
-        distance_weight = 0.3  # Balance factor for distance (adjustable)
-        density_weight = 0.7   # Balance factor for density (adjustable)
+        # Step 4: Combine scores
+        distance_weight = 0.5  # Adjust based on preference
+        density_weight = 0.5  # Balance between exploration and efficiency
 
         combined_scores = [
             distance_weight * normalized_distances[i] + density_weight * normalized_densities[i]
             for i in range(len(frontier_points))
         ]
 
-        # Step 4: Return the frontier point with the best (lowest) combined score
-        best_frontier_index = combined_scores.index(min(combined_scores))
+        # Step 5: Select the best frontier
+        best_frontier_index = combined_scores.index(max(combined_scores))  # Max since we inverted distance
         return frontier_points[best_frontier_index]
+
 
 
 

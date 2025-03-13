@@ -3,11 +3,11 @@
 - [✔️] 🔍 Ricontrollare le probabilità cumulate
 - [✔️] 📍 Punti di frontiera
 - [✔️] 🛠️ Aggiungere nodi al grafo durante esplorazione
-- [ ] 🛠️ Correggere il codice ricontrollare i commenti, secondo me c'è tanta roba inutile
-
-- [ ] 🖼️ Controllare le voronoi cell se sono renderizzate correttamente
-- [ ] 🚫 Goal non puoò stare su un ostacolo ===> update dinamico del goal
+- [ ] 🛠️ Correggere il codice ricontrollare i commenti, secondo me c è tanta roba inutile
+- [✔️] 🖼️ Controllare le voronoi cell se sono renderizzate correttamente
+- [✔️] 🚫 Goal non puoò stare su un ostacolo ===> update dinamico del goal
 - [ ] 🛠️ Controllare la funzione di d* che controlla gli ostacoli
+- [ ] 🛠️ Sistemare inizializzazione di d*, non viene preso il punto interno della giusta frontiera, inoltre dopo un pochino si blocca e inizia a fare avanti e indietro. Controllare aggiornamento dei punti di frontiera e funzione che prende il goal
 
 
 

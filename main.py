@@ -24,11 +24,13 @@ def main():
                 env.add_obstacle(Obstacle(x, y, env))
                 break
     env.build_graph()
+    env.update_voronoi()
     env.init_env()
+
     for agent in env.agents:
         agent.init_d_star()
     
-    env.update_voronoi()
+
 
     print(f"Creato ambiente {env.width}x{env.height} con {len(env.agents)} agenti e {len(env.obstacles)} ostacoli.")
 
