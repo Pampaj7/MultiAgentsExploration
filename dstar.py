@@ -81,10 +81,10 @@ def nextInShortestPath(graph, s_current):
             raise ValueError('could not find child for transition!')
 
 
-def scanForObstacles(graph, queue, s_current, scan_range, k_m):
-    states_to_update = {}
+def scanForObstacles(graph, queue, s_current, scan_range, k_m, agent_id):
+    states_to_update = {} #salva le celle da vedere con la loro probabilità di occupazione
     range_checked = 0
-    if scan_range >= 1:
+    if scan_range >= 1:# controlla i vicini diretti
         for neighbor in graph.graph[s_current].children:
             neighbor_coords = stateNameToCoords(neighbor)
             states_to_update[neighbor] = graph.grid[neighbor_coords[1]
@@ -93,7 +93,7 @@ def scanForObstacles(graph, queue, s_current, scan_range, k_m):
     # print(states_to_update)
 
     while range_checked < scan_range:
-        new_set = {}
+        new_set = {} #salva la lista aggiornata di celle da vedere
         for state in states_to_update:
             new_set[state] = states_to_update[state]
             for neighbor in graph.graph[state].children:
@@ -105,17 +105,17 @@ def scanForObstacles(graph, queue, s_current, scan_range, k_m):
         states_to_update = new_set
 
     new_obstacle = False
-    for state in states_to_update:
-        if states_to_update[state] < 0:  # found cell with obstacle
+    for state in states_to_update:#controlla tutte le celle viste
+        if states_to_update[state] > 0.8:  # found cell with obstacle
             # print('found obstacle in ', state)
             for neighbor in graph.graph[state].children:
                 # first time to observe this obstacle where one wasn't before
                 if(graph.graph[state].children[neighbor] != float('inf')):
                     neighbor_coords = stateNameToCoords(state)
-                    graph.cells[neighbor_coords[1]][neighbor_coords[0]] = -2
+                    #graph.cells[neighbor_coords[1]][neighbor_coords[0]] = -2
                     graph.graph[neighbor].children[state] = float('inf')
                     graph.graph[state].children[neighbor] = float('inf')
-                    updateVertex(graph, queue, state, s_current, k_m)
+                    updateVertex(graph, queue, state, s_current, k_m, agent_id)
                     new_obstacle = True
         # elif states_to_update[state] == 0: #cell without obstacle
             # for neighbor in graph.graph[state].children:
@@ -126,22 +126,33 @@ def scanForObstacles(graph, queue, s_current, scan_range, k_m):
 
 
 def moveAndRescan(graph, queue, s_current, scan_range, k_m, agent_id):
-    if(s_current == graph.goals.get(agent_id)):
+    if s_current == graph.goals.get(agent_id):
         return 'goal', k_m
-    else:
-        s_last = s_current
-        s_new = nextInShortestPath(graph, s_current)
-        new_coords = stateNameToCoords(s_new)
 
-        if(graph.grid[new_coords[1]][new_coords[0]] > 0.5):  # just ran into new obstacle
-            s_new = s_current  # need to hold tight and scan/replan first
+    # 1️⃣ Scan first and update the map
+    results = scanForObstacles(graph, queue, s_current, scan_range, k_m, agent_id)
 
-        results = scanForObstacles(graph, queue, s_new, scan_range, k_m)
-        # print(graph)
-        k_m += heuristic_from_s(graph, s_last, s_new)
+    # 2️⃣ Recalculate path if needed
+    if results:  # If a new obstacle was detected
         computeShortestPath(graph, queue, s_current, k_m, agent_id)
 
-        return s_new, k_m
+    # 3️⃣ Now select the next move
+    s_last = s_current
+    s_new = nextInShortestPath(graph, s_current)
+
+    # 4️⃣ Avoid moving into newly discovered obstacles
+    new_coords = stateNameToCoords(s_new)
+    if graph.grid[new_coords[1]][new_coords[0]] > 0.5:
+        s_new = s_current  # Stay in place and wait for replanning
+
+    # 5️⃣ Update key modifier for D* Lite
+    k_m += heuristic_from_s(graph, s_last, s_new)
+
+    # 6️⃣ Compute shortest path as usual (only if no obstacle was detected earlier)
+    computeShortestPath(graph, queue, s_current, k_m, agent_id)
+
+    return s_new, k_m
+
 
 
 def initDStarLite(graph, queue, s_start, s_goal, k_m, agent_id):

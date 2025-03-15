@@ -26,6 +26,8 @@ class Agent:
         self.sensing_accuracy = 0.9  # Precisione del sensore dell'agente
         self.vision = 3 # Raggio di visione dell'agente
         self.enviroment = enviroment
+        self.queue = []  # Coda di priorità per D* Lite
+        self.k_m = 0  # Fattore di aggiustamento del costo
         self.visited_cells = {}  # Celle visitate dall'agente 
 
         

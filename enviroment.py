@@ -196,7 +196,7 @@ class Enviroment(Graph):
             vision = agent.vision  # Agent's vision range
             voronoi_cells = self.voronoi_cells[agent.id]  # Get agent's Voronoi cells
 
-            for x, y in voronoi_cells:  # Only check cells inside the agent's Voronoi region
+            for (x, y) in voronoi_cells:  # Only check cells inside the agent's Voronoi region
                 if self.grid[x, y] >= 0.5:  # Unexplored cells are not frontiers themselves
                     continue
 
