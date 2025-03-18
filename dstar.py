@@ -45,6 +45,7 @@ def updateVertex(graph, queue, id, s_current, k_m, agent_id):
 
 
 def computeShortestPath(graph, queue, s_start, k_m, agent_id):
+    print(f"🛠️ Recomputing shortest path from {s_start} | Queue size: {len(queue)}")
     while (graph.graph[agent_id][s_start].rhs != graph.graph[agent_id][s_start].g) or (topKey(queue) < calculateKey(graph, s_start, s_start, k_m, agent_id)):
         if not queue:
             print("Queue is empty, cannot update path!")
@@ -64,25 +65,32 @@ def computeShortestPath(graph, queue, s_start, k_m, agent_id):
             updateVertex(graph, queue, u, s_start, k_m, agent_id)
             for i in graph.graph[agent_id][u].parents:
                 updateVertex(graph, queue, i, s_start, k_m, agent_id)
+    print(f"✅ Shortest path updated | New queue size: {len(queue)}")
 
 
 def nextInShortestPath(graph, s_current, agent_id):
     min_rhs = float('inf')
     s_next = None
+
     if graph.graph[agent_id][s_current].rhs == float('inf'):
-        print('You are done stuck')
+        print(f'❌ ERROR: Agent at {s_current} is stuck! No valid path.')
     else:
         for i in graph.graph[agent_id][s_current].children:
-            # print(i)
             child_cost = graph.graph[agent_id][i].g + graph.graph[agent_id][s_current].children[i]
-            # print(child_cost)
+
+            # 🔍 Debug print
+            print(f"🔎 Checking child {i} | Cost: {child_cost} | Edge cost: {graph.graph[agent_id][s_current].children[i]}")
+
             if (child_cost) < min_rhs:
                 min_rhs = child_cost
                 s_next = i
+
         if s_next:
+            print(f"✅ Next move selected: {s_next}")
             return s_next
         else:
-            raise ValueError('could not find child for transition!')
+            raise ValueError('❌ ERROR: Could not find child for transition!')
+
 
 
 def scanForObstacles(graph, queue, s_current, scan_range, k_m, agent_id):
@@ -110,11 +118,12 @@ def scanForObstacles(graph, queue, s_current, scan_range, k_m, agent_id):
 
     new_obstacle = False
     for state in states_to_update:#controlla tutte le celle viste
-        if states_to_update[state] > 0.8:  # found cell with obstacle
-            # print('found obstacle in ', state)
+        if states_to_update[state] > 0.7:  # found cell with obstacle
+            print(f"🔴 Obstacle detected at {state} | Current position: {s_current}")
             for neighbor in graph.graph[agent_id][state].children:
                 # first time to observe this obstacle where one wasn't before
                 if(graph.graph[agent_id][state].children[neighbor] != float('inf')):
+                    print(f"⚠️ Blocking path between {state} and {neighbor}")
                     neighbor_coords = stateNameToCoords(state)
                     #graph.cells[neighbor_coords[1]][neighbor_coords[0]] = -2
                     graph.graph[agent_id][neighbor].children[state] = float('inf')
@@ -139,14 +148,18 @@ def moveAndRescan(graph, queue, s_current, scan_range, k_m, agent_id):
     # 2️⃣ Recalculate path if needed
     if results:  # If a new obstacle was detected
         computeShortestPath(graph, queue, s_current, k_m, agent_id)
+        print('Obstacle detected, replanning path... , new queue ', queue)
 
     # 3️⃣ Now select the next move
     s_last = s_current
+    print(f"🚶 Agent at {s_current} | Checking next move...")
     s_new = nextInShortestPath(graph, s_current, agent_id)
+    print(f"🔍 Next planned move: {s_new}")
 
     # 4️⃣ Avoid moving into newly discovered obstacles
     new_coords = stateNameToCoords(s_new)
     if graph.grid[new_coords[1]][new_coords[0]] > 0.5:
+        print(f"❌ WARNING: {s_new} is an obstacle! Staying at {s_current}")
         s_new = s_current  # Stay in place and wait for replanning
 
     # 5️⃣ Update key modifier for D* Lite
@@ -154,6 +167,7 @@ def moveAndRescan(graph, queue, s_current, scan_range, k_m, agent_id):
 
     # 6️⃣ Compute shortest path as usual (only if no obstacle was detected earlier)
     computeShortestPath(graph, queue, s_current, k_m, agent_id)
+    #print('Moving from', s_current, 'to', s_new, 'with k_m =', k_m, 'new queue', queue)
 
     return s_new, k_m
 

@@ -72,7 +72,7 @@ class Enviroment(Graph):
         Aggiunge un agente alla simulazione.
         """
         self.agents.append(agent)
-        #print(f"Agent added at position: ({agent.x}, {agent.y})")
+        print(f"Agent added at position: ({agent.x}, {agent.y})")
 
     def add_obstacle(self, obstacle):
         """
@@ -241,7 +241,10 @@ class Enviroment(Graph):
         # Visualizza la mappa di base con sfumature di grigio invertite in base alla probabilità
         cmap = plt.get_cmap('gray_r')  # Usa una colormap in scala di grigi invertita
         norm = mcolors.Normalize(vmin=0, vmax=1)  # Normalizza tra 0 e 1
-        ax.imshow(self.grid.T, cmap=cmap, norm=norm, origin='lower', extent=(0, self.width, 0, self.height))
+        ax.imshow(self.grid, cmap=cmap, norm=norm, origin='lower', extent=(0, self.grid.shape[1], 0, self.grid.shape[0]))        # Print the coordinates in each cell
+        for x in range(self.width):
+            for y in range(self.height):
+                ax.text(x + 0.5, y + 0.5, f'({x},{y})', color='black', ha='center', va='center', fontsize=8)
 
         # Definisci una colormap per le regioni di Voronoi
         cmap_voronoi = plt.get_cmap("tab10")  # Usa 10 colori diversi per gli agenti
@@ -396,11 +399,11 @@ class Enviroment(Graph):
         """Reset path information (rhs, g, and other values) only for the specific agent"""
         
         # Reset the rhs, g values and queue entries for the current agent's start and goal
-        start_id = f'x{self.agents[agent_id].x}y{self.agents[agent_id].y}'
         goal_id = self.goals[agent_id]
+        for node in self.graph[agent_id].values():
+            node.g = float('inf')
+            node.rhs = float('inf')
         
-        # Set g and rhs to infinity or the initial values for these nodes
-        self.graph[agent_id][start_id].g = float('inf')
         self.graph[agent_id][goal_id].rhs = 0  # The goal always has rhs 0 at the start
 
         
