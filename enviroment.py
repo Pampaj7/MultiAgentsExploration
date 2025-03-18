@@ -33,11 +33,14 @@ class Enviroment(Graph):
         self.graph = {}
 
     def init_env(self):
+        
         self.start = {agent.id: None for agent in self.agents}
         self.goals = {agent.id: None for agent in self.agents}
         self.frontier_points = {agent.id: [] for agent in self.agents}
 
         pos = {obs.position for obs in self.obstacles}  # Set for fast lookup
+
+        self.build_graph()
 
         for agent in self.agents:
             vision = agent.vision  # Agent's vision range
@@ -69,14 +72,14 @@ class Enviroment(Graph):
         Aggiunge un agente alla simulazione.
         """
         self.agents.append(agent)
-        print(f"Agent added at position: ({agent.x}, {agent.y})")
+        #print(f"Agent added at position: ({agent.x}, {agent.y})")
 
     def add_obstacle(self, obstacle):
         """
         Aggiunge un ostacolo all'ambiente.
         """
         self.obstacles.append(obstacle)
-        print(f"Obstacle added at position: ({obstacle.position})")
+        #print(f"Obstacle added at position: ({obstacle.position})")
 
     def update_map(self):
         """
@@ -123,15 +126,8 @@ class Enviroment(Graph):
         return posterior
     
     def update_voronoi(self):
-        """
-        Update the Voronoi cells of each agent.
-        Each agent receives the list of cells assigned to its Voronoi region.
-        """
-        import numpy as np
-        from scipy.spatial import Voronoi, cKDTree
-
         # Initialize Voronoi cells dictionary with empty lists
-        self.voronoi_cells = {agent.id: [] for agent in self.agents}  # 🟢 FIXED HERE
+        self.voronoi_cells = {agent.id: [] for agent in self.agents}
 
         # Case 1: Only one agent (takes all cells)
         if len(self.agents) == 1:
@@ -140,32 +136,43 @@ class Enviroment(Graph):
 
         # Case 2: Exactly two agents (use perpendicular bisector)
         if len(self.agents) == 2:
-            # Midpoint
-            mid_x = (self.agents[0].y + self.agents[1].y) / 2
-            mid_y = (self.agents[0].x + self.agents[1].x) / 2
+            agent1, agent2 = self.agents[0], self.agents[1]
+            mid_x = (agent1.x + agent2.x) / 2
+            mid_y = (agent1.y + agent2.y) / 2
 
-            # If vertical line (equal x-coordinates)
-            if self.agents[0].x == self.agents[1].x:
+            # Vertical bisector (same x-coordinate)
+            if agent1.y == agent2.y:
+                first_agent = agent1 if agent1.x < agent2.x else agent2
+                second_agent = agent1 if agent1.x > agent2.x else agent2
                 for x in range(self.width):
                     for y in range(self.height):
-                        if x < mid_x:
-                            self.voronoi_cells[self.agents[0].id].append((x, y))
+                        if x < mid_x:  
+                            self.voronoi_cells[first_agent.id].append((x, y))
                         else:
-                            self.voronoi_cells[self.agents[1].id].append((x, y))
+                            self.voronoi_cells[second_agent.id].append((x, y))
+
+            # Horizontal bisector (same y-coordinate)
+            elif agent1.x == agent2.x:
+                first_agent = agent1 if agent1.y < agent2.y else agent2
+                second_agent = agent1 if agent1.y > agent2.y else agent2
+                for x in range(self.width):
+                    for y in range(self.height):
+                        if y < mid_y:  
+                            self.voronoi_cells[first_agent.id].append((x, y))
+                        else:
+                            self.voronoi_cells[first_agent.id].append((x, y))
+
+            # General case: Perpendicular bisector
             else:
-                # General case: calculate slope and perpendicular slope
-                if self.agents[1].y != self.agents[0].y:
-                    slope = (self.agents[1].x - self.agents[0].x) / (self.agents[1].y - self.agents[0].y)
-                else:
-                    slope = float('inf')  # Use infinity to represent a vertical line
-                perp_slope = -1 / slope
-
                 for x in range(self.width):
                     for y in range(self.height):
-                        if (y - mid_y) < perp_slope * (x - mid_x):
-                            self.voronoi_cells[self.agents[0].id].append((x, y))
+                        dist1 = (x - agent1.x) ** 2 + (y - agent1.y) ** 2  # Squared Euclidean distance to agent1
+                        dist2 = (x - agent2.x) ** 2 + (y - agent2.y) ** 2  # Squared Euclidean distance to agent2
+
+                        if dist1 < dist2:
+                            self.voronoi_cells[agent1.id].append((x, y))
                         else:
-                            self.voronoi_cells[self.agents[1].id].append((x, y))
+                            self.voronoi_cells[agent2.id].append((x, y))
             return
 
         # Case 3: More than two agents (Voronoi diagram)
@@ -174,8 +181,8 @@ class Enviroment(Graph):
 
         # Voronoi diagram and KDTree
         vor = Voronoi(points)
-        grid_x, grid_y = np.meshgrid(np.arange(self.width), np.arange(self.height))
-        grid_points = np.vstack([grid_x.ravel(), grid_y.ravel()]).T
+        grid_x, grid_y = np.meshgrid(np.arange(self.width), np.arange(self.height), indexing="ij")  # Ensure correct indexing
+        grid_points = np.vstack([grid_x.ravel(), grid_y.ravel()]).T  # Keep (x, y) format
         tree = cKDTree(points)
         _, nearest_agent_idx = tree.query(grid_points)
         grid_assignment = nearest_agent_idx.reshape(self.width, self.height)
@@ -184,7 +191,7 @@ class Enviroment(Graph):
         for x in range(self.width):
             for y in range(self.height):
                 agent_index = grid_assignment[x, y]
-                self.voronoi_cells[index_to_agent[agent_index].id].append((x, y))  # ✅ FIXED HERE
+                self.voronoi_cells[index_to_agent[agent_index].id].append((x, y))
     
     def update_frontier(self):
         """
@@ -234,7 +241,7 @@ class Enviroment(Graph):
         # Visualizza la mappa di base con sfumature di grigio invertite in base alla probabilità
         cmap = plt.get_cmap('gray_r')  # Usa una colormap in scala di grigi invertita
         norm = mcolors.Normalize(vmin=0, vmax=1)  # Normalizza tra 0 e 1
-        ax.imshow(self.grid, cmap=cmap, norm=norm, origin='lower', extent=(0, self.width, 0, self.height))
+        ax.imshow(self.grid.T, cmap=cmap, norm=norm, origin='lower', extent=(0, self.width, 0, self.height))
 
         # Definisci una colormap per le regioni di Voronoi
         cmap_voronoi = plt.get_cmap("tab10")  # Usa 10 colori diversi per gli agenti
@@ -246,13 +253,13 @@ class Enviroment(Graph):
             for (x, y) in cells:
                 voronoi_grid[x, y] = agent_id  # Swap x, y
 
-        # Usa pcolormesh per colorare le regioni Voronoi
         ax.pcolormesh(np.arange(self.width + 1), np.arange(self.height + 1), voronoi_grid.T,
                     cmap=cmap_voronoi, norm=norm_voronoi, alpha=0.4)
 
+
         # Disegna le posizioni degli agenti
         agent_positions = np.array([(agent.x, agent.y) for agent in self.agents])  # Correct (x, y) order
-        ax.scatter(agent_positions[:, 1] + 0.5, agent_positions[:, 0] + 0.5,
+        ax.scatter(agent_positions[:, 0] + 0.5, agent_positions[:, 1] + 0.5,
                 color='red', label='Agenti', marker='x', s=100)
 
         # Stampa la probabilità in ogni cella
@@ -266,8 +273,8 @@ class Enviroment(Graph):
             if points:  # Ensure there are points to plot
                 frontier_positions = np.array(points)  # Convert to NumPy array
                 if frontier_positions.ndim == 2 and frontier_positions.shape[1] == 2:
-                    ax.scatter(frontier_positions[:, 1] + 0.5,  # X-coordinates
-                            frontier_positions[:, 0] + 0.5,  # Y-coordinates
+                    ax.scatter(frontier_positions[:, 0] + 0.5,  # X-coordinates
+                            frontier_positions[:, 1] + 0.5,  # Y-coordinates
                             color='blue',
                             label=f'Frontiera Agente {agent_id}',
                             marker='o',
@@ -275,13 +282,15 @@ class Enviroment(Graph):
         
         # Disegna gli ostacoli  
         for obs in self.obstacles:
-            ax.scatter(obs.position[1] + 0.5, obs.position[0] + 0.5, color='purple', marker='s', s=50)
+            ax.scatter(obs.position[0] + 0.5, obs.position[1] + 0.5, color='purple', marker='s', s=50)
+            ax.text(obs.position[0] + 0.5, obs.position[1] + 0.5, f'{obs.position}', color='white', ha='center', va='center', fontsize=8)
+
         
         # Disegna il Goal
         for agent_id, goal in self.goals.items():
             if goal is not None:
                 goal_coords = stateNameToCoords(goal)
-                ax.scatter(goal_coords[1] + 0.5, goal_coords[0] + 0.5, color='orange', marker='x', s=100, label=f'Goal Agente {agent_id}')
+                ax.scatter(goal_coords[0] + 0.5, goal_coords[1] + 0.5, color='orange', marker='x', s=100, label=f'Goal Agente {agent_id}')
 
         ax.set_title('Ambiente - Esplorazione con Voronoi')
         ax.set_xlabel('X')
@@ -302,7 +311,8 @@ class Enviroment(Graph):
             for agent in self.agents:
                 agent.explore()  # Ogni agente esplora (fa un passo)
 
-            self.update_map() 
+            self.update_map()
+            #self.update_voronoi() 
             self.update_graph()
             self.update_frontier()  
             #self.update_obstacles() 
@@ -322,19 +332,37 @@ class Enviroment(Graph):
     def update_graph(self):
         for agent in self.agents:  # Loop through all agents
             for (x, y), occupied in agent.visited_cells.items():  # Loop through all visited cells
-                
                 id = f'x{x}y{y}'  # Convert to string ID
 
-                # Find neighbors (4-connected grid: up, down, left, right)
-                neighbors = []
                 possible_neighbors = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
                 
-                neighbors = [f'x{n[0]}y{n[1]}' for n in possible_neighbors if 0 <= n[0] < self.width and 0 <= n[1] < self.height and self.grid[n[0]][n[1]] != 0.5]
-                # Call addNodeToGraph to add/update the node in the graph
-                self.addNodeToGraph(id, neighbors)
+                # Check if the point is inside the agent's own Voronoi cell
+                if (x, y) in self.voronoi_cells[agent.id]:
+                    owner_id = agent.id  # The agent owns this cell
+                else:
+                    # Find which agent owns this cell
+                    owner_id = None
+                    for other_agent in self.agents:
+                        if (x, y) in self.voronoi_cells[other_agent.id]:
+                            owner_id = other_agent.id
+                            break  # Stop once the owner is found
+                
+                # Ensure that the node is correctly added to the owner’s graph
+                if owner_id is not None:
+                    neighbors = [
+                        f'x{n[0]}y{n[1]}' 
+                        for n in possible_neighbors 
+                        if 0 <= n[0] < self.width and 0 <= n[1] < self.height and self.grid[n[0]][n[1]] != 0.5 and (n[0], n[1]) in self.voronoi_cells[owner_id]
+                    ]
+                    
+                    # ✅ Add the node to the correct agent's graph
+                    if owner_id in self.graph:  # Ensure the agent has a graph
+                        self.addNodeToGraph(id, neighbors, owner_id)
+                        #print(f"Added node {id} to agent {owner_id}'s graph with neighbors {neighbors}")
 
     def build_graph(self):
         edge = 1
+        self.graph = {agent.id: {} for agent in self.agents}
         for agent in self.agents:
             vision = agent.vision  # Agent's vision range
 
@@ -343,10 +371,10 @@ class Enviroment(Graph):
                     node_id = f'x{i}y{j}'
 
                     # If node does not exist, create it
-                    if node_id not in self.graph:
-                        self.graph[node_id] = Node(node_id)
+                    if node_id not in self.graph[agent.id]:
+                        self.graph[agent.id][node_id] = Node(node_id)
 
-                    node = self.graph[node_id]  # Get the node reference
+                    node = self.graph[agent.id][node_id]  # Get the node reference
 
                     # Check and connect with existing neighbors
                     neighbors = [
@@ -358,11 +386,11 @@ class Enviroment(Graph):
                     for ni, nj in neighbors:
                         neighbor_id = f'x{ni}y{nj}'
                         if 0 <= ni < self.height and 0 <= nj < self.width:  # Ensure it's in bounds
-                            if neighbor_id in self.graph:  # If neighbor already exists, connect them
+                            if neighbor_id in self.graph[agent.id]:  # If neighbor already exists, connect them
                                 node.parents[neighbor_id] = edge
                                 node.children[neighbor_id] = edge
-                                self.graph[neighbor_id].parents[node_id] = edge
-                                self.graph[neighbor_id].children[node_id] = edge
+                                self.graph[agent.id][neighbor_id].parents[node_id] = edge
+                                self.graph[agent.id][neighbor_id].children[node_id] = edge
 
     def resetAgentPathCosts(self, agent_id):
         """Reset path information (rhs, g, and other values) only for the specific agent"""
@@ -372,8 +400,9 @@ class Enviroment(Graph):
         goal_id = self.goals[agent_id]
         
         # Set g and rhs to infinity or the initial values for these nodes
-        self.graph[start_id].g = float('inf')
-        self.graph[goal_id].rhs = 0  # The goal always has rhs 0 at the start
+        self.graph[agent_id][start_id].g = float('inf')
+        self.graph[agent_id][goal_id].rhs = 0  # The goal always has rhs 0 at the start
+
         
 
 

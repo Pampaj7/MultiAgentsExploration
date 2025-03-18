@@ -11,7 +11,7 @@ class Agent:
     esplora, comunica con altri agenti e raccoglie dati.
     """
 
-    def __init__(self, id, x, y, enviroment):
+    def __init__(self, id, enviroment, n_agents):
         """
         Inizializza un nuovo agente.
 
@@ -21,14 +21,37 @@ class Agent:
         :param enviroment: Istanza dell'ambiente in cui l'agente opera.
         """
         self.id = id
-        self.x = x
-        self.y = y
+        self.x = None
+        self.y = None
         self.sensing_accuracy = 0.9  # Precisione del sensore dell'agente
         self.vision = 3 # Raggio di visione dell'agente
         self.enviroment = enviroment
         self.queue = []  # Coda di priorità per D* Lite
         self.k_m = 0  # Fattore di aggiustamento del costo
-        self.visited_cells = {}  # Celle visitate dall'agente 
+        self.visited_cells = {}  # Celle visitate dall'agente
+        self.init_pos(n_agents)
+
+    def init_pos(self, num_agents):
+        
+        """
+        Initialize the agent's position such that agents are equally spread inside the environment.
+        """
+        env_width = self.enviroment.width
+        env_height = self.enviroment.height
+
+        # Calculate grid size based on the number of agents
+        grid_size = int(np.sqrt(env_width * env_height / num_agents))
+
+        # Determine the agent's position based on its id
+        row = (self.id * grid_size) % env_height
+        col = ((self.id * grid_size) // env_height) * grid_size % env_width
+
+        self.x = col + random.randint(0, grid_size - 1)
+        self.y = row + random.randint(0, grid_size - 1)
+
+        # Ensure the position is within bounds
+        self.x = min(self.x, env_width - 1)
+        self.y = min(self.y, env_height - 1)
 
         
     def init_d_star(self):
@@ -44,6 +67,10 @@ class Agent:
         self.enviroment.setStart(start_id, self.id)
         if goal_id:
             self.enviroment.setGoal(goal_id, self.id)
+        
+        else:
+            print(f"Agent {self.id} has no goal to reach!")
+            self.enviroment.setGoal(start_id, self.id)  # Stay in place if no frontier points
         
         print(f"Agent {self.id} new goal: {goal_id}")  # Debugging
         self.run_d_star_lite()
