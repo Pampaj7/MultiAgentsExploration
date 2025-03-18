@@ -244,7 +244,7 @@ class Enviroment(Graph):
         ax.imshow(self.grid, cmap=cmap, norm=norm, origin='lower', extent=(0, self.grid.shape[1], 0, self.grid.shape[0]))        # Print the coordinates in each cell
         for x in range(self.width):
             for y in range(self.height):
-                ax.text(x + 0.5, y + 0.5, f'({x},{y})', color='black', ha='center', va='center', fontsize=8)
+                ax.text(x + 0.5, y + 0.5, f'({y},{x})', color='black', ha='center', va='center', fontsize=8)
 
         # Definisci una colormap per le regioni di Voronoi
         cmap_voronoi = plt.get_cmap("tab10")  # Usa 10 colori diversi per gli agenti
@@ -256,13 +256,13 @@ class Enviroment(Graph):
             for (x, y) in cells:
                 voronoi_grid[x, y] = agent_id  # Swap x, y
 
-        ax.pcolormesh(np.arange(self.width + 1), np.arange(self.height + 1), voronoi_grid.T,
+        ax.pcolormesh(np.arange(self.width + 1), np.arange(self.height + 1), voronoi_grid,
                     cmap=cmap_voronoi, norm=norm_voronoi, alpha=0.4)
 
 
         # Disegna le posizioni degli agenti
         agent_positions = np.array([(agent.x, agent.y) for agent in self.agents])  # Correct (x, y) order
-        ax.scatter(agent_positions[:, 0] + 0.5, agent_positions[:, 1] + 0.5,
+        ax.scatter(agent_positions[:, 1] + 0.5, agent_positions[:, 0] + 0.5,
                 color='red', label='Agenti', marker='x', s=100)
 
         # Stampa la probabilità in ogni cella
@@ -276,8 +276,8 @@ class Enviroment(Graph):
             if points:  # Ensure there are points to plot
                 frontier_positions = np.array(points)  # Convert to NumPy array
                 if frontier_positions.ndim == 2 and frontier_positions.shape[1] == 2:
-                    ax.scatter(frontier_positions[:, 0] + 0.5,  # X-coordinates
-                            frontier_positions[:, 1] + 0.5,  # Y-coordinates
+                    ax.scatter(frontier_positions[:, 1] + 0.5,  # X-coordinates
+                            frontier_positions[:, 0] + 0.5,  # Y-coordinates
                             color='blue',
                             label=f'Frontiera Agente {agent_id}',
                             marker='o',
@@ -285,15 +285,15 @@ class Enviroment(Graph):
         
         # Disegna gli ostacoli  
         for obs in self.obstacles:
-            ax.scatter(obs.position[0] + 0.5, obs.position[1] + 0.5, color='purple', marker='s', s=50)
-            ax.text(obs.position[0] + 0.5, obs.position[1] + 0.5, f'{obs.position}', color='white', ha='center', va='center', fontsize=8)
+            ax.scatter(obs.position[1] + 0.5, obs.position[0] + 0.5, color='purple', marker='s', s=50)
+            ax.text(obs.position[1] + 0.5, obs.position[0] + 0.5, f'{obs.position}', color='white', ha='center', va='center', fontsize=8)
 
         
         # Disegna il Goal
         for agent_id, goal in self.goals.items():
             if goal is not None:
                 goal_coords = stateNameToCoords(goal)
-                ax.scatter(goal_coords[0] + 0.5, goal_coords[1] + 0.5, color='orange', marker='x', s=100, label=f'Goal Agente {agent_id}')
+                ax.scatter(goal_coords[1] + 0.5, goal_coords[0] + 0.5, color='orange', marker='x', s=100, label=f'Goal Agente {agent_id}')
 
         ax.set_title('Ambiente - Esplorazione con Voronoi')
         ax.set_xlabel('X')
