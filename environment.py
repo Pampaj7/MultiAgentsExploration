@@ -5,16 +5,15 @@ from matplotlib.animation import FuncAnimation
 from scipy.spatial import Voronoi, voronoi_plot_2d, cKDTree
 import matplotlib.colors as mcolors
 import random
-from map_graph import Node,Graph
+from map_graph import Node, Graph
 from utils import stateNameToCoords
-
 
 matplotlib.use('TkAgg')  # oppure 'Qt5Agg', 'Qt4Agg', a seconda di ciò che hai installato
 
 
 # damnit! this solved the problem
 
-class Enviroment(Graph):
+class Environment(Graph):
     """
     Classe che rappresenta un ambiente bidimensionale esplorato da agenti.
     """
@@ -25,15 +24,15 @@ class Enviroment(Graph):
         """
         self.width = width
         self.height = height
-        self.grid = np.full((self.width, self.height), 0.5) 
+        self.grid = np.full((self.width, self.height), 0.5)
         self.agents = []
         self.obstacles = []
         self.voronoi_cells = {}
-        self.frontier_points= {}
+        self.frontier_points = {}
         self.graph = {}
 
     def init_env(self):
-        
+
         self.start = {agent.id: None for agent in self.agents}
         self.goals = {agent.id: None for agent in self.agents}
         self.frontier_points = {agent.id: [] for agent in self.agents}
@@ -49,20 +48,20 @@ class Enviroment(Graph):
 
                     # Ensure frontier points do not touch the border of the map
                     if (
-                        (i == max(0, agent.x - vision) or i == min(self.width - 1, agent.x + vision)) and 0 < i < self.width - 1
+                            (i == max(0, agent.x - vision) or i == min(self.width - 1,
+                                                                       agent.x + vision)) and 0 < i < self.width - 1
                     ) or (
-                        (j == max(0, agent.y - vision) or j == min(self.height - 1, agent.y + vision)) and 0 < j < self.height - 1
+                            (j == max(0, agent.y - vision) or j == min(self.height - 1,
+                                                                       agent.y + vision)) and 0 < j < self.height - 1
                     ):
-                        if (i, j) not in pos and (i,j) in self.voronoi_cells[agent.id]:
+                        if (i, j) not in pos and (i, j) in self.voronoi_cells[agent.id]:
                             self.frontier_points[agent.id].append((i, j))
-
-        
 
         for agent in self.agents:
             for i in range(max(0, agent.x - agent.vision), min(self.width, agent.x + agent.vision + 1)):
                 for j in range(max(0, agent.y - agent.vision), min(self.height, agent.y + agent.vision + 1)):
                     p_obs_given_occupied, p_obs_given_free = (
-                        (agent.sensing_accuracy, 1 - agent.sensing_accuracy) if (i, j) in pos 
+                        (agent.sensing_accuracy, 1 - agent.sensing_accuracy) if (i, j) in pos
                         else (1 - agent.sensing_accuracy, agent.sensing_accuracy)
                     )
                     self.grid[i, j] = self.bayes_update(self.grid[i, j], p_obs_given_occupied, p_obs_given_free)
@@ -79,7 +78,7 @@ class Enviroment(Graph):
         Aggiunge un ostacolo all'ambiente.
         """
         self.obstacles.append(obstacle)
-        #print(f"Obstacle added at position: ({obstacle.position})")
+        # print(f"Obstacle added at position: ({obstacle.position})")
 
     def update_map(self):
         """
@@ -101,14 +100,13 @@ class Enviroment(Graph):
                     # Bayesian update
                     self.grid[x, y] = self.bayes_update(self.grid[x, y], p_obs_given_occupied, p_obs_given_free)
 
-
         for x, y in np.ndindex(self.grid.shape):
             if (x, y) not in agent.visited_cells:
                 if self.grid[x, y] < 0.5:
                     self.grid[x, y] += 0.01
                 elif self.grid[x, y] > 0.5:
                     self.grid[x, y] -= 0.01
-                    
+
     def bayes_update(self, prior, p_obs_given_occupied, p_obs_given_free):
         """
         Perform a Bayesian update of occupancy probability.
@@ -120,11 +118,11 @@ class Enviroment(Graph):
 
         Returns:
             float: Updated posterior probability of the cell being occupied.
-        """        
+        """
         evidence = p_obs_given_occupied * prior + p_obs_given_free * (1 - prior)
         posterior = (p_obs_given_occupied * prior) / evidence if evidence > 0 else prior
         return posterior
-    
+
     def update_voronoi(self):
         # Initialize Voronoi cells dictionary with empty lists
         self.voronoi_cells = {agent.id: [] for agent in self.agents}
@@ -146,7 +144,7 @@ class Enviroment(Graph):
                 second_agent = agent1 if agent1.x > agent2.x else agent2
                 for x in range(self.width):
                     for y in range(self.height):
-                        if x < mid_x:  
+                        if x < mid_x:
                             self.voronoi_cells[first_agent.id].append((x, y))
                         else:
                             self.voronoi_cells[second_agent.id].append((x, y))
@@ -157,7 +155,7 @@ class Enviroment(Graph):
                 second_agent = agent1 if agent1.y > agent2.y else agent2
                 for x in range(self.width):
                     for y in range(self.height):
-                        if y < mid_y:  
+                        if y < mid_y:
                             self.voronoi_cells[first_agent.id].append((x, y))
                         else:
                             self.voronoi_cells[first_agent.id].append((x, y))
@@ -181,7 +179,8 @@ class Enviroment(Graph):
 
         # Voronoi diagram and KDTree
         vor = Voronoi(points)
-        grid_x, grid_y = np.meshgrid(np.arange(self.width), np.arange(self.height), indexing="ij")  # Ensure correct indexing
+        grid_x, grid_y = np.meshgrid(np.arange(self.width), np.arange(self.height),
+                                     indexing="ij")  # Ensure correct indexing
         grid_points = np.vstack([grid_x.ravel(), grid_y.ravel()]).T  # Keep (x, y) format
         tree = cKDTree(points)
         _, nearest_agent_idx = tree.query(grid_points)
@@ -192,7 +191,7 @@ class Enviroment(Graph):
             for y in range(self.height):
                 agent_index = grid_assignment[x, y]
                 self.voronoi_cells[index_to_agent[agent_index].id].append((x, y))
-    
+
     def update_frontier(self):
         """
         Update the frontier points of the environment.
@@ -212,7 +211,7 @@ class Enviroment(Graph):
                     continue  # Skip border cells
 
                 # Check neighbors to see if this is a frontier point
-                neighbors = [(x-1, y), (x+1, y), (x, y-1), (x, y+1)]
+                neighbors = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
                 for nx, ny in neighbors:
                     if 0 < nx < self.width and 0 < ny < self.height:
                         if self.grid[nx, ny] == 0.5:  # Unknown neighbor found
@@ -226,104 +225,106 @@ class Enviroment(Graph):
         Update the obstacles in the environment.
         """
         for obs in self.obstacles:
-            obs.move()      
+            obs.move()
 
-    def render(self, ax):
+    def render(self, ax, show_cell_coords=True, show_probabilities=False, show_legend=False):
         """
         Visualizza la mappa dell'ambiente usando Matplotlib.
-        Mostra la posizione degli agenti e le celle esplorate, evidenziando le celle Voronoi.
+        Mostra la posizione degli agenti, ostacoli, celle Voronoi, frontiere e goal.
         """
+        import numpy as np
+        import matplotlib.pyplot as plt
+        import matplotlib.colors as mcolors
+        from utils import stateNameToCoords
+
         fig = plt.gcf()
-        fig.set_size_inches(12, 12)  # Imposta la dimensione della finestra a 12x12 pollici
+        fig.set_size_inches(12, 12)
+        ax.clear()
 
-        ax.clear()  # Pulisce il grafico prima di ridisegnare
+        # 1. Mappa base (probabilità di occupazione)
+        cmap = plt.get_cmap('gray_r')
+        norm = mcolors.Normalize(vmin=0, vmax=1)
+        ax.imshow(self.grid, cmap=cmap, norm=norm, origin='lower',
+                  extent=(0, self.grid.shape[1], 0, self.grid.shape[0]))
 
-        # Visualizza la mappa di base con sfumature di grigio invertite in base alla probabilità
-        cmap = plt.get_cmap('gray_r')  # Usa una colormap in scala di grigi invertita
-        norm = mcolors.Normalize(vmin=0, vmax=1)  # Normalizza tra 0 e 1
-        ax.imshow(self.grid, cmap=cmap, norm=norm, origin='lower', extent=(0, self.grid.shape[1], 0, self.grid.shape[0]))        # Print the coordinates in each cell
-        for x in range(self.width):
-            for y in range(self.height):
-                ax.text(x + 0.5, y + 0.5, f'({y},{x})', color='black', ha='center', va='center', fontsize=8)
+        # 2. Coordinate o probabilità dentro le celle
+        for row in range(self.height):
+            for col in range(self.width):
+                if show_cell_coords:
+                    ax.text(col + 0.5, row + 0.5, f'({col},{row})', color='black',
+                            ha='center', va='center', fontsize=8)
+                elif show_probabilities:
+                    ax.text(col + 0.5, row + 0.5, f'{self.grid[row, col]:.2f}', color='black',
+                            ha='center', va='center', fontsize=8)
 
-        # Definisci una colormap per le regioni di Voronoi
-        cmap_voronoi = plt.get_cmap("tab10")  # Usa 10 colori diversi per gli agenti
-        norm_voronoi = mcolors.Normalize(vmin=0, vmax=len(self.agents) - 1)  # Normalizza ID agenti
-
-        # Disegna le regioni di Voronoi
-        voronoi_grid = np.full((self.width, self.height), -1)  # Inizializza griglia con -1 (nessuna regione)
+        # 3. Regioni di Voronoi (non trasposte, disegnate con row, col)
+        cmap_voronoi = plt.get_cmap("tab10")
+        norm_voronoi = mcolors.Normalize(vmin=0, vmax=max(len(self.agents) - 1, 1))
+        voronoi_grid = np.full((self.height, self.width), -1)
         for agent_id, cells in self.voronoi_cells.items():
-            for (x, y) in cells:
-                voronoi_grid[x, y] = agent_id  # Swap x, y
+            for (x, y) in cells:  # x=row, y=col
+                voronoi_grid[x, y] = agent_id
+        ax.pcolormesh(np.arange(self.width + 1), np.arange(self.height + 1),
+                      voronoi_grid, cmap=cmap_voronoi, norm=norm_voronoi, alpha=0.4)
 
-        ax.pcolormesh(np.arange(self.width + 1), np.arange(self.height + 1), voronoi_grid,
-                    cmap=cmap_voronoi, norm=norm_voronoi, alpha=0.4)
-
-
-        # Disegna le posizioni degli agenti
-        agent_positions = np.array([(agent.x, agent.y) for agent in self.agents])  # Correct (x, y) order
+        # 4. Posizioni agenti
+        agent_positions = np.array([(agent.x, agent.y) for agent in self.agents])
         ax.scatter(agent_positions[:, 1] + 0.5, agent_positions[:, 0] + 0.5,
-                color='red', label='Agenti', marker='x', s=100)
+                   color='red', label='Agenti', marker='x', s=100)
 
-        # Stampa la probabilità in ogni cella
-        # for x in range(self.width):
-        #     for y in range(self.height):
-        #         ax.text(y + 0.5, x + 0.5, f'{self.grid[x, y]:.2f}', 
-        #                 color='black', ha='center', va='center', fontsize=8)
-
-        # Disegna i punti di frontiera per ogni agente
-        for agent_id, points in self.frontier_points.items():
-            if points:  # Ensure there are points to plot
-                frontier_positions = np.array(points)  # Convert to NumPy array
-                if frontier_positions.ndim == 2 and frontier_positions.shape[1] == 2:
-                    ax.scatter(frontier_positions[:, 1] + 0.5,  # X-coordinates
-                            frontier_positions[:, 0] + 0.5,  # Y-coordinates
-                            color='blue',
-                            label=f'Frontiera Agente {agent_id}',
-                            marker='o',
-                            s=50)
-        
-        # Disegna gli ostacoli  
+        # 5. Ostacoli
         for obs in self.obstacles:
-            ax.scatter(obs.position[1] + 0.5, obs.position[0] + 0.5, color='purple', marker='s', s=50)
-            ax.text(obs.position[1] + 0.5, obs.position[0] + 0.5, f'{obs.position}', color='white', ha='center', va='center', fontsize=8)
+            x, y = obs.position  # x=row, y=col
+            ax.scatter(y + 0.5, x + 0.5, color='purple', marker='s', s=50)
+            ax.text(y + 0.5, x + 0.5, f'({y},{x})', color='white', ha='center',
+                    va='center', fontsize=8)
 
-        
-        # Disegna il Goal
+        # 6. Punti di frontiera
+        for agent_id, points in self.frontier_points.items():
+            if points:
+                frontier_positions = np.array(points)
+                if frontier_positions.ndim == 2 and frontier_positions.shape[1] == 2:
+                    ax.scatter(frontier_positions[:, 1] + 0.5,
+                               frontier_positions[:, 0] + 0.5,
+                               color='blue', label=f'Frontiera {agent_id}',
+                               marker='o', s=50)
+
+        # 7. Goal per agente
         for agent_id, goal in self.goals.items():
             if goal is not None:
-                goal_coords = stateNameToCoords(goal)
-                ax.scatter(goal_coords[1] + 0.5, goal_coords[0] + 0.5, color='orange', marker='x', s=100, label=f'Goal Agente {agent_id}')
+                gx, gy = stateNameToCoords(goal)  # gx=row, gy=col
+                ax.scatter(gy + 0.5, gx + 0.5, color='orange', marker='x', s=100,
+                           label=f'Goal {agent_id}')
 
         ax.set_title('Ambiente - Esplorazione con Voronoi')
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        #ax.legend(loc='upper left')
+        ax.set_xlabel('X (Colonne)')
+        ax.set_ylabel('Y (Righe)')
 
-    def animate(self, steps=10, interval=1000):
-        # funziona partenza
+        if show_legend:
+            ax.legend(loc='upper right')
+
+    def animate(self, steps, interval=1000):
         fig, ax = plt.subplots()
         ax.set_xlim(0, self.width)
         ax.set_ylim(0, self.height)
 
         def update(frame):
-            """
-            Funzione di aggiornamento per ogni fotogramma dell'animazione.
-            """
-            # Ogni agente esegue un movimento per ogni fotogramma
+            ax.clear()
+            ax.set_xlim(0, self.width)
+            ax.set_ylim(0, self.height)
+
             for agent in self.agents:
-                agent.explore()  # Ogni agente esplora (fa un passo)
+                agent.explore()
 
             self.update_map()
-            #self.update_voronoi() 
             self.update_graph()
-            self.update_frontier()  
-            #self.update_obstacles() 
-            self.render(ax)  # Rende la mappa aggiornata
+            self.update_frontier()
+            self.render(ax)
+
             return []
 
-        # 10 è il numero di passi totali per tutti gli agenti
         ani = FuncAnimation(fig, update, frames=steps, interval=interval)
+
         plt.show()
 
     def __str__(self):
@@ -338,7 +339,7 @@ class Enviroment(Graph):
                 id = f'x{x}y{y}'  # Convert to string ID
 
                 possible_neighbors = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
-                
+
                 # Check if the point is inside the agent's own Voronoi cell
                 if (x, y) in self.voronoi_cells[agent.id]:
                     owner_id = agent.id  # The agent owns this cell
@@ -349,19 +350,20 @@ class Enviroment(Graph):
                         if (x, y) in self.voronoi_cells[other_agent.id]:
                             owner_id = other_agent.id
                             break  # Stop once the owner is found
-                
+
                 # Ensure that the node is correctly added to the owner’s graph
                 if owner_id is not None:
                     neighbors = [
-                        f'x{n[0]}y{n[1]}' 
-                        for n in possible_neighbors 
-                        if 0 <= n[0] < self.width and 0 <= n[1] < self.height and self.grid[n[0]][n[1]] != 0.5 and (n[0], n[1]) in self.voronoi_cells[owner_id]
+                        f'x{n[0]}y{n[1]}'
+                        for n in possible_neighbors
+                        if 0 <= n[0] < self.width and 0 <= n[1] < self.height and self.grid[n[0]][n[1]] != 0.5 and (
+                            n[0], n[1]) in self.voronoi_cells[owner_id]
                     ]
-                    
+
                     # ✅ Add the node to the correct agent's graph
                     if owner_id in self.graph:  # Ensure the agent has a graph
                         self.addNodeToGraph(id, neighbors, owner_id)
-                        #print(f"Added node {id} to agent {owner_id}'s graph with neighbors {neighbors}")
+                        # print(f"Added node {id} to agent {owner_id}'s graph with neighbors {neighbors}")
 
     def build_graph(self):
         edge = 1
@@ -384,7 +386,7 @@ class Enviroment(Graph):
                         (i - 1, j),  # Top
                         (i + 1, j),  # Bottom
                         (i, j - 1),  # Left
-                        (i, j + 1)   # Right
+                        (i, j + 1)  # Right
                     ]
                     for ni, nj in neighbors:
                         neighbor_id = f'x{ni}y{nj}'
@@ -397,16 +399,11 @@ class Enviroment(Graph):
 
     def resetAgentPathCosts(self, agent_id):
         """Reset path information (rhs, g, and other values) only for the specific agent"""
-        
+
         # Reset the rhs, g values and queue entries for the current agent's start and goal
         goal_id = self.goals[agent_id]
         for node in self.graph[agent_id].values():
             node.g = float('inf')
             node.rhs = float('inf')
-        
+
         self.graph[agent_id][goal_id].rhs = 0  # The goal always has rhs 0 at the start
-
-        
-
-
-        

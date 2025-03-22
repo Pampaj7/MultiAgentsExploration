@@ -4,7 +4,6 @@ from dstar import initDStarLite, moveAndRescan
 from utils import stateNameToCoords
 
 
-
 class Agent:
     """
     Rappresenta un agente che si muove in un ambiente,
@@ -24,7 +23,7 @@ class Agent:
         self.x = None
         self.y = None
         self.sensing_accuracy = 0.9  # Precisione del sensore dell'agente
-        self.vision = 3 # Raggio di visione dell'agente
+        self.vision = 3  # Raggio di visione dell'agente
         self.enviroment = enviroment
         self.queue = []  # Coda di priorità per D* Lite
         self.k_m = 0  # Fattore di aggiustamento del costo
@@ -32,7 +31,7 @@ class Agent:
         self.init_pos(n_agents)
 
     def init_pos(self, num_agents):
-        
+
         """
         Initialize the agent's position such that agents are equally spread inside the environment.
         """
@@ -53,7 +52,6 @@ class Agent:
         self.x = min(self.x, env_width - 1)
         self.y = min(self.y, env_height - 1)
 
-        
     def init_d_star(self):
         start_id = f'x{self.x}y{self.y}'
         goal_id = None
@@ -67,11 +65,11 @@ class Agent:
         self.enviroment.setStart(start_id, self.id)
         if goal_id:
             self.enviroment.setGoal(goal_id, self.id)
-        
+
         else:
             print(f"Agent {self.id} has no goal to reach!")
             self.enviroment.setGoal(start_id, self.id)  # Stay in place if no frontier points
-        
+
         print(f"Agent {self.id} new goal: {goal_id}")  # Debugging
         self.run_d_star_lite()
 
@@ -89,7 +87,7 @@ class Agent:
 
             # Initialize D* Lite and store updated queue and k_m
             _, self.queue, self.k_m = initDStarLite(self.enviroment, self.queue, start_id, goal_id, self.k_m, self.id)
-        
+
     def explore(self):
         pos = f'x{self.x}y{self.y}'
         s_new, self.k_m = moveAndRescan(
@@ -98,18 +96,19 @@ class Agent:
 
         if s_new == 'goal':
             print(f'Agent {self.id} reached its goal at {self.x, self.y}!')
-            self.init_d_star()  
+            self.init_d_star()
         else:
             self.s_current = s_new
             self.x, self.y = stateNameToCoords(self.s_current)  # Update agent's coordinates
 
         obstacle_positions = {(obs.position) for obs in self.enviroment.obstacles}  # ✅ Now a set
-        self.visited_cells ={}
+        self.visited_cells = {}
         for i in range(max(0, self.x - self.vision), min(self.enviroment.width, self.x + self.vision + 1)):
             for j in range(max(0, self.y - self.vision), min(self.enviroment.height, self.y + self.vision + 1)):
                 if (i, j) in obstacle_positions:
-                    self.visited_cells[(i,j)]= True
-                else: self.visited_cells[(i,j)]= False
+                    self.visited_cells[(i, j)] = True
+                else:
+                    self.visited_cells[(i, j)] = False
 
     def compute_heuristic(self, frontier_points):
         """
@@ -162,9 +161,3 @@ class Agent:
         # Step 5: Select the best frontier
         best_frontier_index = combined_scores.index(max(combined_scores))  # Max since we inverted distance
         return frontier_points[best_frontier_index]
-
-
-
-
-
-

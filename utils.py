@@ -2,7 +2,7 @@ import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-matplotlib.use('TkAgg')  # oppure 'Qt5Agg', 'Qt4Agg', a seconda di ciò che hai installato
+matplotlib.use('Agg')  # oppure 'Qt5Agg', 'Qt4Agg', a seconda di ciò che hai installato
 
 
 def create_video(n, frames=100, interval=1000 / 30):

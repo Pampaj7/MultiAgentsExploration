@@ -1,16 +1,16 @@
 from agent import Agent
-from enviroment import Enviroment
+from environment import Environment
 import random
 from obstacle import Obstacle
 
 
 def main():
     # 📌 1. Creiamo un ambiente di dimensione 20x20
-    env = Enviroment(width=20, height=20)
+    env = Environment(width=20, height=20)
 
     # 📌 2. Creiamo 5 agenti in posizioni casuali
-    num_agents = 1
-    num_obstacles = 30
+    num_agents = 2
+    num_obstacles = 10
 
     for i in range(num_agents):
         agent = Agent(id=i, enviroment=env, n_agents=num_agents)
@@ -24,18 +24,14 @@ def main():
                 break
     env.update_voronoi()
     env.init_env()
-    
-    
 
     for agent in env.agents:
         agent.init_d_star()
-    
-
 
     print(f"Creato ambiente {env.width}x{env.height} con {len(env.agents)} agenti e {len(env.obstacles)} ostacoli.")
 
-    # 📌 3. Avviamo la simulazione con 50 passi
-    steps_per_agent = 50
+    # 📌 3. Avviamo la simulazione con 10 passi
+    steps_per_agent = 10
     env.animate(steps=steps_per_agent)
 
 
