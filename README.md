@@ -9,8 +9,8 @@ This project implements a simulation of **multi-agent exploration**, using:
 - **Real-time visualization** using Matplotlib.
 
 ---
+<pre>
 
-## 📂 Project Structure
 multiagent-exploration/
 │
 ├── main.py                   -> Entry point: creates environment and starts the simulation
@@ -39,6 +39,8 @@ multiagent-exploration/
 │
 ├── requirements.txt         -> Project dependencies
 └── README.md                -> This file
+
+</pre>
 
 ---
 
