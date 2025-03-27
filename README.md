@@ -10,36 +10,18 @@ This project implements a simulation of **multi-agent exploration**, using:
 
 ---
 <pre>
-
 multiagent-exploration/
 │
-├── main.py                   -> Entry point: creates environment and starts the simulation
-│
-├── agents/                  -> Agent logic and control loop
-│   ├── __init__.py
-│   └── controller.py        -> Handles perception, planning, and actuation for each agent
-│
-├── exploration/             -> Exploration strategies
-│   ├── __init__.py
-│   ├── frontier.py          -> Frontier cell detection
-│   └── voronoi.py           -> Voronoi region computation
-│
-├── map/                     -> Probabilistic map representation
-│   ├── __init__.py
-│   ├── map_handler.py       -> Manages grid state and cell properties
-│   └── probabilistic_map.py -> Entropy, thresholds, and map updates
-│
-├── navigation/              -> Path planning algorithms
-│   ├── __init__.py
-│   └── astar.py             -> A* planner (easily extendable)
-│
-├── utils/
-│   ├── __init__.py
-│   └── visualizer.py        -> Real-time visualization with Matplotlib
-│
-├── requirements.txt         -> Project dependencies
-└── README.md                -> This file
-
+├── main.py              -> Entry point: runs the simulation
+├── environment.py       -> Environment and map logic
+├── agent.py             -> Agent logic and behavior
+├── dstar.py             -> D* Lite algorithm implementation
+├── map_graph.py         -> Graph abstraction of the environment
+├── obstacle.py          -> Obstacle representation
+├── utils.py             -> Utilities and helper functions
+├── requirements.txt     -> Project dependencies
+├── README.md            -> This file
+├── todo                 -> Notes or development tasks
 </pre>
 
 ---
