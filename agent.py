@@ -94,21 +94,25 @@ class Agent:
             self.enviroment, self.queue, pos, self.vision, self.k_m, self.id
         )
 
-        if s_new == 'goal':
-            print(f'Agent {self.id} reached its goal at {self.x, self.y}!')
-            self.init_d_star()
-        else:
-            self.s_current = s_new
-            self.x, self.y = stateNameToCoords(self.s_current)  # Update agent's coordinates
+        if s_new is None:
+            print(f"⚠️ Agent {self.id} has no valid next step from {self.x, self.y} (s_new is None).")
+            self.enviroment.goals[self.id] = None  # Ferma l'agente
+            return
 
-        obstacle_positions = {(obs.position) for obs in self.enviroment.obstacles}  # ✅ Now a set
+        if s_new == 'goal':
+            print(f'✅ Agent {self.id} reached its goal at {self.x, self.y}!')
+            self.init_d_star()
+            return
+
+        # S_new è una nuova posizione valida
+        self.s_current = s_new
+        self.x, self.y = stateNameToCoords(self.s_current)
+
+        obstacle_positions = {(obs.position) for obs in self.enviroment.obstacles}
         self.visited_cells = {}
         for i in range(max(0, self.x - self.vision), min(self.enviroment.width, self.x + self.vision + 1)):
             for j in range(max(0, self.y - self.vision), min(self.enviroment.height, self.y + self.vision + 1)):
-                if (i, j) in obstacle_positions:
-                    self.visited_cells[(i, j)] = True
-                else:
-                    self.visited_cells[(i, j)] = False
+                self.visited_cells[(i, j)] = (i, j) in obstacle_positions
 
     def compute_heuristic(self, frontier_points):
         """

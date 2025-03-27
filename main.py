@@ -9,7 +9,7 @@ def main():
     env = Environment(width=20, height=20)
 
     # 📌 2. Creiamo 5 agenti in posizioni casuali
-    num_agents = 2
+    num_agents = 5
     num_obstacles = 10
 
     for i in range(num_agents):
