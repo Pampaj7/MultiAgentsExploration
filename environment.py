@@ -78,7 +78,7 @@ class Environment(Graph):
         Aggiunge un ostacolo all'ambiente.
         """
         self.obstacles.append(obstacle)
-        # print(f"Obstacle added at position: ({obstacle.position})")
+        print(f"Obstacle added at position: ({obstacle.position})")
 
     def update_map(self):
         """
@@ -275,8 +275,8 @@ class Environment(Graph):
         # 5. Ostacoli
         for obs in self.obstacles:
             x, y = obs.position  # x=row, y=col
-            ax.scatter(y + 0.5, x + 0.5, color='purple', marker='s', s=50)
-            ax.text(y + 0.5, x + 0.5, f'({y},{x})', color='white', ha='center',
+            ax.scatter(x + 0.5, y + 0.5, color='purple', marker='s', s=50)
+            ax.text(x + 0.5, y + 0.5, f'({x},{y})', color='white', ha='center',
                     va='center', fontsize=8)
 
         # 6. Punti di frontiera

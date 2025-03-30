@@ -29,4 +29,12 @@ def create_video(n, frames=100, interval=1000 / 30):
 
 
 def stateNameToCoords(name):
-    return [int(name.split('x')[1].split('y')[0]), int(name.split('x')[1].split('y')[1])]
+    if not isinstance(name, str) or not name.startswith('x'):
+        return None
+    parts = name[1:].split('y')
+    if len(parts) != 2:
+        return None
+    try:
+        return [int(parts[0]), int(parts[1])]
+    except ValueError:
+        return None

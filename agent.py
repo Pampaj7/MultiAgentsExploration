@@ -63,7 +63,7 @@ class Agent:
             goal_id = f'x{goal_point[0]}y{goal_point[1]}'
 
         self.enviroment.setStart(start_id, self.id)
-        if goal_id:
+        if goal_id is not None:
             self.enviroment.setGoal(goal_id, self.id)
 
         else:
@@ -154,8 +154,8 @@ class Agent:
         normalized_densities = [normalize(d, min_density, max_density) for d in densities]
 
         # Step 4: Combine scores
-        distance_weight = 0.5  # Adjust based on preference
-        density_weight = 0.5  # Balance between exploration and efficiency
+        distance_weight = 0.3  # Adjust based on preference
+        density_weight = 0.7  # Balance between exploration and efficiency
 
         combined_scores = [
             distance_weight * normalized_distances[i] + density_weight * normalized_densities[i]

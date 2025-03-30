@@ -19,7 +19,9 @@ def heuristic_from_s(graph, id, s):
 
 
 def calculateKey(graph, id, s_current, k_m, agent_id):
-    return (min(graph.graph[agent_id][id].g, graph.graph[agent_id][id].rhs) + heuristic_from_s(graph, id, s_current) + k_m, min(graph.graph[agent_id][id].g, graph.graph[agent_id][id].rhs))
+    return (
+        min(graph.graph[agent_id][id].g, graph.graph[agent_id][id].rhs) + heuristic_from_s(graph, id, s_current) + k_m,
+        min(graph.graph[agent_id][id].g, graph.graph[agent_id][id].rhs))
 
 
 def updateVertex(graph, queue, id, s_current, k_m, agent_id):
@@ -43,10 +45,10 @@ def updateVertex(graph, queue, id, s_current, k_m, agent_id):
         heapq.heappush(queue, calculateKey(graph, id, s_current, k_m, agent_id) + (id,))
 
 
-
 def computeShortestPath(graph, queue, s_start, k_m, agent_id):
     print(f"🛠️ Recomputing shortest path from {s_start} | Queue size: {len(queue)}")
-    while (graph.graph[agent_id][s_start].rhs != graph.graph[agent_id][s_start].g) or (topKey(queue) < calculateKey(graph, s_start, s_start, k_m, agent_id)):
+    while (graph.graph[agent_id][s_start].rhs != graph.graph[agent_id][s_start].g) or (
+            topKey(queue) < calculateKey(graph, s_start, s_start, k_m, agent_id)):
         if not queue:
             print("Queue is empty, cannot update path!")
             return
@@ -79,7 +81,8 @@ def nextInShortestPath(graph, s_current, agent_id):
             child_cost = graph.graph[agent_id][i].g + graph.graph[agent_id][s_current].children[i]
 
             # 🔍 Debug print
-            print(f"🔎 Checking child {i} | Cost: {child_cost} | Edge cost: {graph.graph[agent_id][s_current].children[i]}")
+            print(
+                f"🔎 Checking child {i} | Cost: {child_cost} | Edge cost: {graph.graph[agent_id][s_current].children[i]}")
 
             if (child_cost) < min_rhs:
                 min_rhs = child_cost
@@ -92,47 +95,46 @@ def nextInShortestPath(graph, s_current, agent_id):
             raise ValueError('❌ ERROR: Could not find child for transition!')
 
 
-
 def scanForObstacles(graph, queue, s_current, scan_range, k_m, agent_id):
-    states_to_update = {} #salva le celle da vedere con la loro probabilità di occupazione
+    states_to_update = {}  # salva le celle da vedere con la loro probabilità di occupazione
     range_checked = 0
-    if scan_range >= 1:# controlla i vicini diretti
+    if scan_range >= 1:  # controlla i vicini diretti
         for neighbor in graph.graph[agent_id][s_current].children:
             neighbor_coords = stateNameToCoords(neighbor)
             states_to_update[neighbor] = graph.grid[neighbor_coords[1]
-                                                     ][neighbor_coords[0]]
+            ][neighbor_coords[0]]
         range_checked = 1
     # print(states_to_update)
 
     while range_checked < scan_range:
-        new_set = {} #salva la lista aggiornata di celle da vedere
+        new_set = {}  # salva la lista aggiornata di celle da vedere
         for state in states_to_update:
             new_set[state] = states_to_update[state]
             for neighbor in graph.graph[agent_id][state].children:
                 if neighbor not in new_set:
                     neighbor_coords = stateNameToCoords(neighbor)
                     new_set[neighbor] = graph.grid[neighbor_coords[1]
-                                                    ][neighbor_coords[0]]
+                    ][neighbor_coords[0]]
         range_checked += 1
         states_to_update = new_set
 
     new_obstacle = False
-    for state in states_to_update:#controlla tutte le celle viste
+    for state in states_to_update:  # controlla tutte le celle viste
         if states_to_update[state] > 0.7:  # found cell with obstacle
             print(f"🔴 Obstacle detected at {state} | Current position: {s_current}")
             for neighbor in graph.graph[agent_id][state].children:
                 # first time to observe this obstacle where one wasn't before
-                if(graph.graph[agent_id][state].children[neighbor] != float('inf')):
+                if (graph.graph[agent_id][state].children[neighbor] != float('inf')):
                     print(f"⚠️ Blocking path between {state} and {neighbor}")
                     neighbor_coords = stateNameToCoords(state)
-                    #graph.cells[neighbor_coords[1]][neighbor_coords[0]] = -2
+                    # graph.cells[neighbor_coords[1]][neighbor_coords[0]] = -2
                     graph.graph[agent_id][neighbor].children[state] = float('inf')
                     graph.graph[agent_id][state].children[neighbor] = float('inf')
                     updateVertex(graph, queue, state, s_current, k_m, agent_id)
                     new_obstacle = True
         # elif states_to_update[state] == 0: #cell without obstacle
-            # for neighbor in graph.graph[state].children:
-                # if(graph.graph[state].children[neighbor] != float('inf')):
+        # for neighbor in graph.graph[state].children:
+        # if(graph.graph[state].children[neighbor] != float('inf')):
 
     # print(graph)
     return new_obstacle
@@ -142,35 +144,41 @@ def moveAndRescan(graph, queue, s_current, scan_range, k_m, agent_id):
     if s_current == graph.goals.get(agent_id):
         return 'goal', k_m
 
-    # 1️⃣ Scan first and update the map
+    # 1️⃣ Scan for obstacles and update map
     results = scanForObstacles(graph, queue, s_current, scan_range, k_m, agent_id)
 
     # 2️⃣ Recalculate path if needed
-    if results:  # If a new obstacle was detected
+    if results:
         computeShortestPath(graph, queue, s_current, k_m, agent_id)
         print('Obstacle detected, replanning path... , new queue ', queue)
 
-    # 3️⃣ Now select the next move
+    # 3️⃣ Get next planned move
     s_last = s_current
     print(f"🚶 Agent at {s_current} | Checking next move...")
     s_new = nextInShortestPath(graph, s_current, agent_id)
     print(f"🔍 Next planned move: {s_new}")
 
-    # 4️⃣ Avoid moving into newly discovered obstacles
+    if s_new is None:
+        print(f"❌ ERROR: Agent at {s_current} is stuck! No valid path.")
+        return None, k_m
+
+    # 4️⃣ Avoid moving into obstacles
     new_coords = stateNameToCoords(s_new)
+    if new_coords is None:
+        print(f"⚠️ Invalid state format for: {s_new}")
+        return s_current, k_m  # fallback
+
     if graph.grid[new_coords[1]][new_coords[0]] > 0.5:
         print(f"❌ WARNING: {s_new} is an obstacle! Staying at {s_current}")
-        s_new = s_current  # Stay in place and wait for replanning
+        s_new = s_current
 
-    # 5️⃣ Update key modifier for D* Lite
+    # 5️⃣ Update key modifier
     k_m += heuristic_from_s(graph, s_last, s_new)
 
-    # 6️⃣ Compute shortest path as usual (only if no obstacle was detected earlier)
+    # 6️⃣ Recompute shortest path
     computeShortestPath(graph, queue, s_current, k_m, agent_id)
-    #print('Moving from', s_current, 'to', s_new, 'with k_m =', k_m, 'new queue', queue)
 
     return s_new, k_m
-
 
 
 def initDStarLite(graph, queue, s_start, s_goal, k_m, agent_id):

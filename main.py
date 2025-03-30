@@ -1,7 +1,15 @@
+import numpy as np
+import random
+
 from agent import Agent
 from environment import Environment
-import random
 from obstacle import Obstacle
+
+# 🔒 Fix seed for reproducibility
+# SEED = 42 perfetto
+SEED = 39
+random.seed(SEED)
+np.random.seed(SEED)
 
 
 def main():
@@ -22,6 +30,7 @@ def main():
             if not any(agent.x == x and agent.y == y for agent in env.agents):
                 env.add_obstacle(Obstacle(x, y, env))
                 break
+
     env.update_voronoi()
     env.init_env()
 
