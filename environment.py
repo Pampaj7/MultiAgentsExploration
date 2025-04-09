@@ -214,7 +214,7 @@ class Environment(Graph):
                 neighbors = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
                 for nx, ny in neighbors:
                     if 0 < nx < self.width and 0 < ny < self.height:
-                        if self.grid[nx, ny] == 0.5:  # Unknown neighbor found
+                        if 0.48 <= self.grid[nx, ny] <= 0.52:  # Unknown neighbor found
                             new_frontier[agent.id].append((x, y))
                             break  # No need to check other neighbors
 
