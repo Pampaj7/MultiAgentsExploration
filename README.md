@@ -5,7 +5,7 @@ This project implements a simulation of **multi-agent exploration**, using:
 - **Voronoi cells** to divide the environment spatially.
 - **Entropy** to guide agents toward less explored areas.
 - A **probabilistic map update** strategy with a threshold to classify free vs occupied cells.
-- **Shortest-path algorithms** (A*, BFS) for efficient navigation.
+- **Shortest-path algorithms** (D*) for efficient navigation.
 - **Real-time visualization** using Matplotlib.
 
 ---
@@ -51,7 +51,7 @@ Simulation cycle:
    - The agent selects the frontier cell with the highest entropy (or other heuristic).
 
 5. Path Planning:
-   - The agent uses the A* algorithm to compute a path to the selected goal.
+   - The agent uses the D* algorithm to compute a path to the selected goal.
    - It follows the path step by step, avoiding obstacles and updating the map.
 
 6. Map Update:
