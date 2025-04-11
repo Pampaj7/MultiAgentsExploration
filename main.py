@@ -6,7 +6,7 @@ from environment import Environment
 from obstacle import Obstacle
 
 # 🔒 Fix seed for reproducibility
-SEED = 42
+SEED = 41
 random.seed(SEED)
 np.random.seed(SEED)
 
@@ -39,7 +39,7 @@ def main():
     print(f"Creato ambiente {env.width}x{env.height} con {len(env.agents)} agenti e {len(env.obstacles)} ostacoli.")
 
     # 📌 3. Avviamo la simulazione con 10 passi
-    steps_per_agent = 120
+    steps_per_agent = 100
     env.animate(steps=steps_per_agent)
 
 
