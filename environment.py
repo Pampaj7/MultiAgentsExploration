@@ -244,7 +244,7 @@ class Environment(Graph):
         # 1. Mappa base (probabilità di occupazione)
         cmap = plt.get_cmap('gray_r')
         norm = mcolors.Normalize(vmin=0, vmax=1)
-        ax.imshow(self.grid, cmap=cmap, norm=norm, origin='lower',
+        ax.imshow(self.grid.T, cmap=cmap, norm=norm, origin='lower',
                   extent=(0, self.grid.shape[1], 0, self.grid.shape[0]))
 
         # 2. Coordinate o probabilità dentro le celle
@@ -265,11 +265,11 @@ class Environment(Graph):
             for (x, y) in cells:  # x=row, y=col
                 voronoi_grid[x, y] = agent_id
         ax.pcolormesh(np.arange(self.width + 1), np.arange(self.height + 1),
-                      voronoi_grid, cmap=cmap_voronoi, norm=norm_voronoi, alpha=0.4)
+                      voronoi_grid.T, cmap=cmap_voronoi, norm=norm_voronoi, alpha=0.4)
 
         # 4. Posizioni agenti
         agent_positions = np.array([(agent.x, agent.y) for agent in self.agents])
-        ax.scatter(agent_positions[:, 1] + 0.5, agent_positions[:, 0] + 0.5,
+        ax.scatter(agent_positions[:, 0] + 0.5, agent_positions[:, 1] + 0.5,
                    color='red', label='Agenti', marker='x', s=100)
 
         # 5. Ostacoli
@@ -284,8 +284,8 @@ class Environment(Graph):
             if points:
                 frontier_positions = np.array(points)
                 if frontier_positions.ndim == 2 and frontier_positions.shape[1] == 2:
-                    ax.scatter(frontier_positions[:, 1] + 0.5,
-                               frontier_positions[:, 0] + 0.5,
+                    ax.scatter(frontier_positions[:, 0] + 0.5,
+                               frontier_positions[:, 1] + 0.5,
                                color='blue', label=f'Frontiera {agent_id}',
                                marker='o', s=50)
 
@@ -293,7 +293,7 @@ class Environment(Graph):
         for agent_id, goal in self.goals.items():
             if goal is not None:
                 gx, gy = stateNameToCoords(goal)  # gx=row, gy=col
-                ax.scatter(gy + 0.5, gx + 0.5, color='orange', marker='x', s=100,
+                ax.scatter(gx + 0.5, gy + 0.5, color='orange', marker='x', s=100,
                            label=f'Goal {agent_id}')
 
         ax.set_title('Ambiente - Esplorazione con Voronoi')
