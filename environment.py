@@ -303,7 +303,7 @@ class Environment(Graph):
         if show_legend:
             ax.legend(loc='upper right')
 
-    def animate(self, steps, interval=1000):
+    def animate(self, steps, interval=1000, save_gif=True):
         fig, ax = plt.subplots()
         ax.set_xlim(0, self.width)
         ax.set_ylim(0, self.height)
@@ -325,7 +325,11 @@ class Environment(Graph):
 
         ani = FuncAnimation(fig, update, frames=steps, interval=interval)
 
-        plt.show()
+        if save_gif:
+            ani.save("exploration.gif", writer="pillow", fps=2)
+            print("✅ GIF salvata come exploration.gif")
+        else:
+            plt.show()
 
     def __str__(self):
         """

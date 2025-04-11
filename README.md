@@ -29,6 +29,8 @@ multiagent-exploration/
 🧠 How It Works
 ----------------
 
+![Exploration Demo](exploration.gif)
+
 The MAS simulator uses a decentralized strategy, where each agent explores part of the environment autonomously,
 but implicitly coordinates with others via spatial partitioning.
 
