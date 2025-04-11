@@ -6,7 +6,7 @@ from environment import Environment
 from obstacle import Obstacle
 
 # 🔒 Fix seed for reproducibility
-SEED = 41
+SEED = 42
 random.seed(SEED)
 np.random.seed(SEED)
 

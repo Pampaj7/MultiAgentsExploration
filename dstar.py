@@ -101,8 +101,8 @@ def scanForObstacles(graph, queue, s_current, scan_range, k_m, agent_id):
     if scan_range >= 1:  # controlla i vicini diretti
         for neighbor in graph.graph[agent_id][s_current].children:
             neighbor_coords = stateNameToCoords(neighbor)
-            states_to_update[neighbor] = graph.grid[neighbor_coords[1]
-            ][neighbor_coords[0]]
+            states_to_update[neighbor] = graph.grid[neighbor_coords[0]
+            ][neighbor_coords[1]]
         range_checked = 1
     # print(states_to_update)
 
@@ -113,8 +113,8 @@ def scanForObstacles(graph, queue, s_current, scan_range, k_m, agent_id):
             for neighbor in graph.graph[agent_id][state].children:
                 if neighbor not in new_set:
                     neighbor_coords = stateNameToCoords(neighbor)
-                    new_set[neighbor] = graph.grid[neighbor_coords[1]
-                    ][neighbor_coords[0]]
+                    new_set[neighbor] = graph.grid[neighbor_coords[0]
+                    ][neighbor_coords[1]]
         range_checked += 1
         states_to_update = new_set
 
@@ -168,7 +168,7 @@ def moveAndRescan(graph, queue, s_current, scan_range, k_m, agent_id):
         print(f"⚠️ Invalid state format for: {s_new}")
         return s_current, k_m  # fallback
 
-    if graph.grid[new_coords[1]][new_coords[0]] > 0.5:
+    if graph.grid[new_coords[0]][new_coords[1]] > 0.5:
         print(f"❌ WARNING: {s_new} is an obstacle! Staying at {s_current}")
         s_new = s_current
 
